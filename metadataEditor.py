@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import filedialog, ttk
 from PIL import Image, ImageTk
 import mutagen
-from mutagen.id3 import ID3, USLT, TIT2, TPE1, TALB, TYER, APIC, TCON
+from mutagen.id3 import ID3, USLT, TIT2, TPE1, TALB, TDRC, TCON, APIC
 from mutagen.flac import FLAC, Picture
 import ctypes
 from io import BytesIO
@@ -26,6 +26,7 @@ year = ""
 lyrics = ""
 genre = ""
 image = None
+no_metadata = False
 
 def get_file_path():
     global file_path, file_name
@@ -78,7 +79,7 @@ def show_entry_fields():
     button_search_lyrics = tk.Button(tab2, text="Search Lyrics Online", command=search_lyrics_online)
     button_search_lyrics.grid(row=1, column=0, padx=20, pady=10)
 
-    button_save = tk.Button(root, text="Save", command=apply_changes)
+    button_save = tk.Button(root, text="Save", command=save_changes)
     button_save.grid(row=7, column=0, columnspan=2, pady=10)
 
     tk.Label(tab1, text="Song Name").grid(row=2, column=0, padx=10, pady=5, sticky="e")
@@ -143,7 +144,8 @@ def update_image():
             text.insert(tk.END, "Invalid image format. Please select a JPG/JPEG file\n", "red")
 
 def get_file_metadata(file_path):
-    global song_name, artist, album, year, lyrics, genre, image
+    global song_name, artist, album, year, lyrics, genre, image, no_metadata
+    no_metadata = False
     audio = mutagen.File(file_path, easy=True)
     
     if audio:
@@ -166,6 +168,7 @@ def get_file_metadata(file_path):
         # Check if the file is a FLAC file and use FLAC tags if it is
         elif file_path.endswith(".flac"):
             audio = FLAC(file_path)
+            lyrics = ""
             lyrics = audio.get("LYRICS", [""])[0]
             if audio.pictures:
                 image = audio.pictures[0].data
@@ -182,6 +185,7 @@ def get_file_metadata(file_path):
         lyrics = ""
         genre = ""
         image = None
+        no_metadata = True
         text.delete(1.0, tk.END)
         text.insert(tk.END, "File loaded successfully: " + file_name + "\n")
         text.insert(tk.END, "No metadata found for file: " + file_name + "\n", "yellow")
@@ -203,68 +207,97 @@ def search_lyrics_online():
     update_entry_fields()
 
 def apply_changes():
-    global song_name, artist, album, year, lyrics, genre, image
-    song_name = e1.get()
-    artist = e2.get()
-    album = e3.get()
-    year = e4.get()
-    genre = e5.get()
+    global song_name, artist, album, year, lyrics, genre, image, no_metadata
+
+    song_name = e1.get().strip()
+    artist = e2.get().strip()
+    album = e3.get().strip()
+    year = e4.get().strip()
+    genre = e5.get().strip()
     lyrics = lyric_text_field.get(1.0, tk.END).strip()
 
-    try:
-        if file_path.endswith(".mp3"):
-            audio = ID3(file_path)
-            if not audio:
-                audio = mutagen.File(file_path)
-            audio.delall("USLT")
-            audio.add(USLT(encoding=3, lang=u'eng', desc=u'desc', text=lyrics))
-            audio.delall("TIT2")
-            audio.add(TIT2(encoding=3, text=song_name))
-            audio.delall("TPE1")
-            audio.add(TPE1(encoding=3, text=artist))
-            audio.delall("TALB")
-            audio.add(TALB(encoding=3, text=album))
-            audio.delall("TYER")
-            audio.add(TYER(encoding=3, text=year))
-            audio.delall("TCON")
-            audio.add(TCON(encoding=3, text=genre))
-            if image:
-                audio.delall("APIC")
-                audio.add(APIC(encoding=3, mime='image/jpeg', type=3, desc='Front cover', data=image))
-            audio.save()
-            text.insert(tk.END, "Changes Saved\n", "green")
-        elif file_path.endswith(".flac"):
-            audio = FLAC(file_path)
-            if not audio.info:
-                audio = mutagen.File(file_path)
-            audio["title"] = song_name
-            audio["artist"] = artist
-            audio["album"] = album
-            audio["date"] = year
-            audio["genre"] = genre
-            if lyrics:
-                audio["LYRICS"] = lyrics
-            if image:
-                picture = Picture()
-                picture.data = image
-                picture.type = 3  # Cover (front)
-                picture.mime = "image/jpeg"
-                audio.clear_pictures()  # Remove all existing pictures
-                audio.add_picture(picture)
-            audio.save()
-            text.insert(tk.END, "Changes Saved\n", "green")
+    if file_path.endswith(".mp3"):
+        audio = ID3(file_path)
+        if no_metadata:
+            attributes = [("TIT2", song_name), ("TPE1", artist), ("TALB", album),
+                          ("TDRC", year), ("TCON", genre), ("USLT", lyrics)]
+            for tag, value in attributes:
+                if tag == "USLT":
+                    if tag not in audio:
+                        audio.add(USLT(encoding=3, lang=u'eng', desc=u'desc', text=value))
+                    else:
+                        audio[tag] = USLT(encoding=3, lang=u'eng', desc=u'desc', text=value)
+                else:
+                    if tag not in audio:
+                        audio.add(eval(f"{tag}(encoding=3, text=value)"))
+                    else:
+                        audio[tag] = eval(f"{tag}(encoding=3, text=value)")
         else:
-            audio = mutagen.File(file_path, easy=True)
-            audio["title"] = song_name
-            audio["artist"] = artist
-            audio["album"] = album
-            audio["date"] = year
-            audio["genre"] = genre
-            audio["lyrics"] = lyrics
-            audio.save()
-            text.insert(tk.END, "Changes Saved\n", "green")
-    except Exception as e:
-        text.insert(tk.END, f"Error saving changes: {e}\n", "red")
+            if "TIT2" not in audio:
+                audio.add(TIT2(encoding=3, text=song_name))
+            else:
+                audio["TIT2"] = TIT2(encoding=3, text=song_name)
+            if "TPE1" not in audio:
+                audio.add(TPE1(encoding=3, text=artist))
+            else:
+                audio["TPE1"] = TPE1(encoding=3, text=artist)
+            if "TALB" not in audio:
+                audio.add(TALB(encoding=3, text=album))
+            else:
+                audio["TALB"] = TALB(encoding=3, text=album)
+            if "TDRC" not in audio:
+                audio.add(TDRC(encoding=3, text=year))
+            else:
+                audio["TDRC"] = TDRC(encoding=3, text=year)
+            if "TCON" not in audio:
+                audio.add(TCON(encoding=3, text=genre))
+            else:
+                audio["TCON"] = TCON(encoding=3, text=genre)
+            if "USLT" not in audio:
+                audio.add(USLT(encoding=3, lang=u'eng', desc=u'desc', text=lyrics))
+            else:
+                audio["USLT"] = USLT(encoding=3, lang=u'eng', desc=u'desc', text=lyrics)
+        if image:
+            if "APIC" in audio:
+                audio.delall("APIC")
+            audio.add(APIC(encoding=3, mime='image/jpeg', type=3, desc='Front cover', data=image))
+        audio.save()
+    elif file_path.endswith(".flac"):
+        audio = FLAC(file_path)
+        audio["title"] = song_name
+        audio["artist"] = artist
+        audio["album"] = album
+        audio["date"] = year
+        audio["genre"] = genre
+        if lyrics:
+            audio["LYRICS"] = lyrics
+        if image:
+            picture = Picture()
+            picture.data = image
+            picture.type = 3  # Cover (front)
+            picture.mime = "image/jpeg"
+            audio.clear_pictures()  # Remove all existing pictures
+            audio.add_picture(picture)
+        audio.save()
+    else:
+        audio = mutagen.File(file_path, easy=True)
+        audio["title"] = song_name
+        audio["artist"] = artist
+        audio["album"] = album
+        audio["date"] = year
+        audio["genre"] = genre
+        audio["lyrics"] = lyrics
+        audio.save()
+
+def save_changes():
+    global no_metadata
+
+    if no_metadata: 
+        apply_changes()
+        text.insert(tk.END, "Metadata fields have been created\n", "green")
+    
+    apply_changes()
+    text.insert(tk.END, "Changes Saved\n", "green")
 
 # Main loop
 root = tk.Tk()
@@ -290,7 +323,7 @@ button_select_file.grid(row=0, column=0, columnspan=2, pady=10)
 text = tk.Text(root, height=3, width=50, font=("Californian FB", 12))
 text.grid(row=2, column=0, columnspan=2, padx=10, pady=10)
 
-# Create a tags for colored text
+# Create text tags for different colors
 text.tag_configure("red", foreground="red")
 text.tag_configure("green", foreground="green")
 text.tag_configure("yellow", foreground="#9c7200")
