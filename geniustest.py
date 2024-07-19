@@ -7,9 +7,9 @@ import re
 def RipLyrics(lyrics_path):
     response = requests.get(lyrics_path)
     soup = BeautifulSoup(response.content, 'html.parser')
-    lyrics_container = soup.find(class_='Lyrics__Container-sc-1ynbvzw-1 kUgSbL')
+    lyrics_containers = soup.find_all(class_='Lyrics__Container-sc-1ynbvzw-1 kUgSbL')
 
-    if lyrics_container:
+    if lyrics_containers:
         # Initialize an empty list to hold parts of the lyrics
         lyrics = []
 
@@ -22,8 +22,10 @@ def RipLyrics(lyrics_path):
             else:
                 for child in element.children:
                     extract_text(child)
-
-        extract_text(lyrics_container)
+        for container in lyrics_containers:
+            lyrics.append('\n')
+            extract_text(container)
+            
 
         # Join the list into a single string
         lyrics_text = ''.join(lyrics)
