@@ -1,4 +1,4 @@
-import webbrowser
+#import webbrowser
 import requests
 from bs4 import BeautifulSoup
 import re
@@ -35,14 +35,17 @@ def RipLyrics(lyrics_path):
 
         print(lyrics_text)
     else:
-        print("Lyrics container not found.")
+        print("We're sorry, lyrics could not be retrieved for this song.\nHere's the link to the page, so you can add them manually.")
+        print(lyrics_path)
 
 
-artistName = "Childish Gambino"
-songName = "Lithonia"
+artistName = "Logic"
+songName = "Homicide"
+albumName = "Confessions of a Dangerous Mind"
 
 songName = songName.replace(" ", "-").lower()
 artistName = artistName.replace(" ", "-").lower()
+albumName = albumName.replace(" ", "-").lower()
 
 lyrics_path = "https://genius.com/"+artistName+"-"+songName+"-lyrics"
 response = requests.head(lyrics_path)
@@ -50,15 +53,25 @@ print("lyrics status code: -> " + response.status_code.__str__())
 lyricsNotFound = response.status_code == 404 
 
 if lyricsNotFound:
-    artist_path = "https://genius.com/artists/"+artistName
-    response = requests.head(artist_path)
-    print("artist status code: -> " + response.status_code.__str__())
-    artistNotFound = response.status_code == 404
-    if artistNotFound:
-        print("The page does not exist.\nPlease check if the artist name and song name are correct.")
+    albumPath = "https://genius.com/albums/"+artistName+"/"+albumName
+    response = requests.head(albumPath)
+    print("album status code: -> " + response.status_code.__str__())
+    albumNotFound = response.status_code == 404
+    if albumNotFound:
+        artist_path = "https://genius.com/artists/"+artistName
+        response = requests.head(artist_path)
+        print("artist status code: -> " + response.status_code.__str__())
+        artistNotFound = response.status_code == 404
+        if artistNotFound:
+            print("The page does not exist.\nPlease check if the song, artist and album names are correct.")
+        else:
+            print("We could not find the lyrics for the song you are looking for.\nHere's the artist page, maybe you can find the song and add the lyrics manually.")
+            print(artist_path)
+            #webbrowser.open(artist_path)
     else:
-        print("We could not find the lyrics for the song you are looking for.\nHere's the artist page, maybe you can find the song and add the lyrics manually.")
-        webbrowser.open(artist_path)
+        print("We could not find the lyrics for the song you are looking for.\nHere's the album page, maybe you can find the song and add the lyrics manually.")
+        print(albumPath)
+        #webbrowser.open(albumPath)
         
 else:
     print("The page exists.")
