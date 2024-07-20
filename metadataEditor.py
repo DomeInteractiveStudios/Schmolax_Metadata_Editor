@@ -6,9 +6,10 @@ from mutagen.id3 import ID3, USLT, TIT2, TPE1, TALB, TDRC, TCON, APIC
 from mutagen.flac import FLAC, Picture
 import ctypes
 from io import BytesIO
-
 file_path = ""
 file_name = ""
+
+from geniusSearch import getVariables
 
 e1 = None  # Song Name field
 e2 = None  # Artist field
@@ -27,6 +28,10 @@ lyrics = ""
 genre = ""
 image = None
 no_metadata = False
+
+def localPrintText(message, color):
+    text.insert(tk.END, message, color)
+    text.see(tk.END)
 
 def get_file_path():
     global file_path, file_name
@@ -141,7 +146,7 @@ def update_image():
                 no_img_text = None
         except Exception as e:
             print(f"Error loading image: {e}")
-            text.insert(tk.END, "Invalid image format. Please select a JPG/JPEG file\n", "red")
+            localPrintText("Invalid image format. Please select a JPG/JPEG file\n", "red")
 
 def get_file_metadata(file_path):
     global song_name, artist, album, year, lyrics, genre, image, no_metadata
@@ -176,7 +181,7 @@ def get_file_metadata(file_path):
             lyrics = audio.get("lyrics", [""])[0]
         
         text.delete(1.0, tk.END)
-        text.insert(tk.END, "File loaded successfully: " + file_name + "\n")
+        localPrintText("File loaded successfully: " + file_name + "\n", "default")
     else:
         song_name = ""
         artist = ""
@@ -187,8 +192,8 @@ def get_file_metadata(file_path):
         image = None
         no_metadata = True
         text.delete(1.0, tk.END)
-        text.insert(tk.END, "File loaded successfully: " + file_name + "\n")
-        text.insert(tk.END, "No metadata found for file: " + file_name + "\n", "yellow")
+        localPrintText("File loaded successfully: " + file_name + "\n", "green")
+        localPrintText("No metadata found for file: " + file_name + "\n", "yellow")
 
 def get_cover_art():
     global image
@@ -199,12 +204,14 @@ def get_cover_art():
                 image = img_file.read()
             update_entry_fields()
         else:
-            text.insert(tk.END, "Invalid image format. Please select a JPG/JPEG file\n", "red")
+            localPrintText("Invalid image format. Please select a JPG/JPEG file\n", "red")
 
 def search_lyrics_online():
     global lyrics
-    lyrics = "Lyrics not found"
+    getVariables(artist, song_name, album)
     update_entry_fields()
+
+
 
 def apply_changes():
     global song_name, artist, album, year, lyrics, genre, image, no_metadata
@@ -294,10 +301,11 @@ def save_changes():
 
     if no_metadata: 
         apply_changes()
-        text.insert(tk.END, "Metadata fields have been created\n", "green")
+        localPrintText("Metadata fields have been created\n", "green")
+        no_metadata = False
     
     apply_changes()
-    text.insert(tk.END, "Changes Saved\n", "green")
+    localPrintText("Changes Saved\n", "green")
 
 # Main loop
 root = tk.Tk()
@@ -327,5 +335,7 @@ text.grid(row=2, column=0, columnspan=2, padx=10, pady=10)
 text.tag_configure("red", foreground="red")
 text.tag_configure("green", foreground="green")
 text.tag_configure("yellow", foreground="#9c7200")
+text.tag_configure("blue", foreground="blue")
+text.tag_configure("default", foreground="black")
 
 root.mainloop()
