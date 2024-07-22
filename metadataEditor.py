@@ -11,6 +11,7 @@ file_name = ""
 
 from geniusSearch import getVariables
 
+
 e1 = None  # Song Name field
 e2 = None  # Artist field
 e3 = None  # Album field
@@ -29,8 +30,9 @@ genre = ""
 image = None
 no_metadata = False
 
-def localPrintText(message, color):
-    text.insert(tk.END, message, color)
+def PrintText(message, color):
+    text.insert(tk.END, message, color); 
+    print("Coglione")
     text.see(tk.END)
 
 def get_file_path():
@@ -146,7 +148,7 @@ def update_image():
                 no_img_text = None
         except Exception as e:
             print(f"Error loading image: {e}")
-            localPrintText("Invalid image format. Please select a JPG/JPEG file\n", "red")
+            PrintText("Invalid image format. Please select a JPG/JPEG file\n", "red")
 
 def get_file_metadata(file_path):
     global song_name, artist, album, year, lyrics, genre, image, no_metadata
@@ -181,7 +183,7 @@ def get_file_metadata(file_path):
             lyrics = audio.get("lyrics", [""])[0]
         
         text.delete(1.0, tk.END)
-        localPrintText("File loaded successfully: " + file_name + "\n", "default")
+        PrintText("File loaded successfully: " + file_name + "\n", "default")
     else:
         song_name = ""
         artist = ""
@@ -192,8 +194,8 @@ def get_file_metadata(file_path):
         image = None
         no_metadata = True
         text.delete(1.0, tk.END)
-        localPrintText("File loaded successfully: " + file_name + "\n", "green")
-        localPrintText("No metadata found for file: " + file_name + "\n", "yellow")
+        PrintText("File loaded successfully: " + file_name + "\n", "green")
+        PrintText("No metadata found for file: " + file_name + "\n", "yellow")
 
 def get_cover_art():
     global image
@@ -204,11 +206,17 @@ def get_cover_art():
                 image = img_file.read()
             update_entry_fields()
         else:
-            localPrintText("Invalid image format. Please select a JPG/JPEG file\n", "red")
+            PrintText("Invalid image format. Please select a JPG/JPEG file\n", "red")
 
 def search_lyrics_online():
+    
     global lyrics
-    getVariables(artist, song_name, album)
+    for output in getVariables(artist, song_name, album): 
+        array = []
+        for value in output:
+            array.append(value)
+        print(array)
+        PrintText(array[1], array[0])
     update_entry_fields()
 
 
@@ -301,15 +309,14 @@ def save_changes():
 
     if no_metadata: 
         apply_changes()
-        localPrintText("Metadata fields have been created\n", "green")
+        PrintText("Metadata fields have been created\n", "green")
         no_metadata = False
     
     apply_changes()
-    localPrintText("Changes Saved\n", "green")
+    PrintText("Changes Saved\n", "green")
 
 # Main loop
 root = tk.Tk()
-
 myappid = 'dome.schmolax_metadata.dolly.v_0.1'  # arbitrary string
 ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
 

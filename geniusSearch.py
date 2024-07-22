@@ -3,7 +3,7 @@ import requests
 from bs4 import BeautifulSoup
 import re
 
-from globalFunctions import PrintText
+outputs = []
 
 #get the song, artist and album names from the user
 global artistName, songName, albumName
@@ -20,6 +20,8 @@ def getVariables(artist, song_name, album):
     albumName = albumName.replace(" ", "-").lower()
 
     main()
+
+    return outputs
 
     
 def RipLyrics(lyrics_path):
@@ -59,36 +61,64 @@ def RipLyrics(lyrics_path):
 def main():
     lyrics_path = "https://genius.com/"+artistName+"-"+songName+"-lyrics"
     response = requests.head(lyrics_path)
-    print()
     lyricsNotFound = response.status_code == 404 
 
     if lyricsNotFound:
-        PrintText("lyrics status code: -> " + response.status_code.__str__(), "red")
+        outputs.append({
+            "lyrics status code: -> " + response.status_code.__str__(), 
+            "red"
+            })
         albumPath = "https://genius.com/albums/"+artistName+"/"+albumName
         response = requests.head(albumPath)
         albumNotFound = response.status_code == 404
         if albumNotFound:
-            PrintText("Album status code: " + response.status_code.__str__(), "red")
+            outputs.append({
+                "Album status code: " + response.status_code.__str__() + "\n", 
+                "red"})
             artist_path = "https://genius.com/artists/"+artistName
             response = requests.head(artist_path)
             artistNotFound = response.status_code == 404
             if artistNotFound:
-                PrintText("Artist status code: " + response.status_code.__str__(), "red")
-                PrintText("The page does not exist.\nPlease check if the song, artist and album names are correct.", "red")
+                outputs.append({
+                    "Artist status code: " + response.status_code.__str__() + "\n",
+                    "red"
+                    })
+                outputs.append({
+                    "The page does not exist.\nPlease check if the song, artist and album names are correct.\n",
+                    "red"})
             else:
-                PrintText("Artist status code: " + response.status_code.__str__(), "green")
-                PrintText("We could not find the lyrics for the song you are looking for.\nHere's the artist page, maybe you can find the song and add the lyrics manually.", "yellow")
-                PrintText(artist_path, "blue")
+                outputs.append({
+                    "Artist status code: " + response.status_code.__str__() + "\n",
+                    "green"
+                    })
+                outputs.append({
+                    "We could not find the lyrics for the song you are looking for.\nHere's the artist page, maybe you can find the song and add the lyrics manually.\n", 
+                    "yellow"})
+                outputs.append({
+                    artist_path, 
+                    "blue"
+                    })
                 #webbrowser.open(artist_path)
         else:
-            PrintText("Album status code: " + response.status_code.__str__(), "green")
-            PrintText("We could not find the lyrics for the song you are looking for.\nHere's the album page, maybe you can find the song and add the lyrics manually.", "yellow")
-            PrintText(albumPath, "blue")
+            outputs.append({
+                "Album status code: " + response.status_code.__str__() + "\n", 
+                "green"
+                })
+            outputs.append({
+                "We could not find the lyrics for the song you are looking for.\nHere's the album page, maybe you can find the song and add the lyrics manually.\n", 
+                "yellow"
+                })
+            outputs.append({
+                albumPath, 
+                "blue"})
             #webbrowser.open(albumPath)
             
     else:
-        PrintText("lyrics status code: -> " + response.status_code.__str__(), "green")
-        PrintText("Lyrics Found", "green")
+        outputs.append({
+            "lyrics status code: -> " + response.status_code.__str__() + "\n", 
+            "green"})
+        outputs.append({
+            "Lyrics Found\n", 
+            "green"})
         #webbrowser.open(lyrics_path)
         RipLyrics(lyrics_path)
-
