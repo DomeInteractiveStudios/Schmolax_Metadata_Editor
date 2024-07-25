@@ -1,11 +1,10 @@
-#import webbrowser
 import requests
 from bs4 import BeautifulSoup
 import re
 
 outputs = []
 
-#get the song, artist and album names from the user
+# Global variables
 global artistName, songName, albumName
 
 def getVariables(artist, song_name, album):
@@ -23,7 +22,6 @@ def getVariables(artist, song_name, album):
 
     return outputs
 
-    
 def RipLyrics(lyrics_path):
     response = requests.get(lyrics_path)
     soup = BeautifulSoup(response.content, 'html.parser')
@@ -45,7 +43,6 @@ def RipLyrics(lyrics_path):
         for container in lyrics_containers:
             lyrics.append('\n')
             extract_text(container)
-            
 
         # Join the list into a single string
         lyrics_text = ''.join(lyrics)
@@ -64,61 +61,71 @@ def main():
     lyricsNotFound = response.status_code == 404 
 
     if lyricsNotFound:
-        outputs.append({
-            "lyrics status code: -> " + response.status_code.__str__(), 
+        outputs.append((
+            "lyrics status code: -> " + response.status_code.__str__() + "\n", 
             "red"
-            })
+        ))
         albumPath = "https://genius.com/albums/"+artistName+"/"+albumName
         response = requests.head(albumPath)
         albumNotFound = response.status_code == 404
         if albumNotFound:
-            outputs.append({
+            outputs.append((
                 "Album status code: " + response.status_code.__str__() + "\n", 
-                "red"})
+                "red"
+            ))
             artist_path = "https://genius.com/artists/"+artistName
             response = requests.head(artist_path)
             artistNotFound = response.status_code == 404
             if artistNotFound:
-                outputs.append({
+                outputs.append((
                     "Artist status code: " + response.status_code.__str__() + "\n",
                     "red"
-                    })
-                outputs.append({
+                ))
+                outputs.append((
                     "The page does not exist.\nPlease check if the song, artist and album names are correct.\n",
-                    "red"})
+                    "red"
+                ))
             else:
-                outputs.append({
+                outputs.append((
                     "Artist status code: " + response.status_code.__str__() + "\n",
                     "green"
-                    })
-                outputs.append({
+                ))
+                outputs.append((
                     "We could not find the lyrics for the song you are looking for.\nHere's the artist page, maybe you can find the song and add the lyrics manually.\n", 
-                    "yellow"})
-                outputs.append({
+                    "yellow"
+                ))
+                outputs.append((
                     artist_path, 
                     "blue"
-                    })
+                ))
                 #webbrowser.open(artist_path)
         else:
-            outputs.append({
+            outputs.append((
                 "Album status code: " + response.status_code.__str__() + "\n", 
                 "green"
-                })
-            outputs.append({
+            ))
+            outputs.append((
                 "We could not find the lyrics for the song you are looking for.\nHere's the album page, maybe you can find the song and add the lyrics manually.\n", 
                 "yellow"
-                })
-            outputs.append({
+            ))
+            outputs.append((
                 albumPath, 
-                "blue"})
+                "blue"
+            ))
             #webbrowser.open(albumPath)
-            
     else:
-        outputs.append({
+        outputs.append((
             "lyrics status code: -> " + response.status_code.__str__() + "\n", 
-            "green"})
-        outputs.append({
+            "green"
+        ))
+        outputs.append((
             "Lyrics Found\n", 
-            "green"})
+            "green"
+        ))
         #webbrowser.open(lyrics_path)
         RipLyrics(lyrics_path)
+
+def PrintText(message, color):
+    # Placeholder for the PrintText function
+    # You can replace this with your actual implementation
+    print(f"{color}: {message}")

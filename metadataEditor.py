@@ -1,4 +1,6 @@
 import tkinter as tk
+import webbrowser
+import re
 from tkinter import filedialog, ttk
 from PIL import Image, ImageTk
 import mutagen
@@ -31,9 +33,34 @@ image = None
 no_metadata = False
 
 def PrintText(message, color):
-    text.insert(tk.END, message, color); 
-    print("Coglione")
-    text.see(tk.END)
+
+    text.config(state=tk.NORMAL)  # Allow text insertion
+    text.insert(tk.END, message, color)
+    
+    # Define the regex pattern to detect URLs
+    url_pattern = re.compile(r'(https?://\S+)')
+    
+    # Find all URLs in the message and tag them
+    for url in url_pattern.findall(message):
+        start_idx = text.search(url, '1.0', tk.END)
+        if start_idx:
+            # Parse the line and column
+            line, col = start_idx.split('.')
+            start_pos = f"{line}.{col}"
+            
+            # Compute the end position
+            end_col = int(col) + len(url)
+            end_pos = f"{line}.{end_col}"
+            
+            # Add and configure the tag
+            text.tag_add('link', start_pos, end_pos)
+            text.tag_config('link', foreground='blue', underline=1)
+            
+            # Bind the link to open in a web browser
+            text.tag_bind('link', '<Button-1>', lambda e, url=url: webbrowser.open(url))
+    
+    text.config(state=tk.DISABLED)  # Prevent typing in the Text widget
+    text.see(tk.END)  # Ensure the latest text is visible
 
 def get_file_path():
     global file_path, file_name
@@ -156,12 +183,13 @@ def get_file_metadata(file_path):
     audio = mutagen.File(file_path, easy=True)
     
     if audio:
-        song_name = audio.get("title", [""])[0]
-        artist = audio.get("artist", [""])[0]
-        album = audio.get("album", [""])[0]
-        temp_year = audio.get("date", [""])[0]
-        year = temp_year.split("-")[0] if temp_year else ""
-        genre = audio.get("genre", [""])[0]
+        if audio.get("title", [""])[0] != "": song_name = audio.get("title", [""])[0]
+        if audio.get("artist", [""])[0] != "": artist = audio.get("artist", [""])[0]
+        if audio.get("album", [""])[0] != "": album = audio.get("album", [""])[0]
+        if audio.get("date", [""])[0] != "": 
+            temp_year = audio.get("date", [""])[0]
+            year = temp_year.split("-")[0] if temp_year else ""
+        if audio.get("genre", [""])[0] != "": genre = audio.get("genre", [""])[0]
         
         # Check if the file is an MP3 file and use ID3 tags if it is
         if file_path.endswith(".mp3"):
@@ -208,15 +236,25 @@ def get_cover_art():
         else:
             PrintText("Invalid image format. Please select a JPG/JPEG file\n", "red")
 
+def is_tag(value):
+    # Check if the value is in the set of known tags
+    return value.lower() in KNOWN_TAGS
+
 def search_lyrics_online():
-    
     global lyrics
+
     for output in getVariables(artist, song_name, album): 
         array = []
         for value in output:
             array.append(value)
-        print(array)
-        PrintText(array[1], array[0])
+
+        # Determine which element is the tag and which is the message
+        if is_tag(array[0]):
+            tag, message = array[0], array[1]
+        else:
+            message, tag = array[0], array[1]
+        PrintText(message, tag)
+
     update_entry_fields()
 
 
@@ -336,6 +374,7 @@ button_select_file.grid(row=0, column=0, columnspan=2, pady=10)
 
 # Create a text widget for displaying status messages
 text = tk.Text(root, height=3, width=50, font=("Californian FB", 12))
+text.config(state=tk.DISABLED) 
 text.grid(row=2, column=0, columnspan=2, padx=10, pady=10)
 
 # Create text tags for different colors
@@ -344,5 +383,7 @@ text.tag_configure("green", foreground="green")
 text.tag_configure("yellow", foreground="#9c7200")
 text.tag_configure("blue", foreground="blue")
 text.tag_configure("default", foreground="black")
+
+KNOWN_TAGS = {"red", "green", "yellow", "blue", "default"}
 
 root.mainloop()
