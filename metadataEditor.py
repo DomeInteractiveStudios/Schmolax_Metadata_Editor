@@ -271,6 +271,7 @@ def search_lyrics_online():
             if(i==2): 
                 lyric_text_field.delete(1.0, tk.END)
                 lyric_text_field.insert(tk.END, message)
+                lyrics = message
             else: 
                 PrintText(message, tag)
         else:
