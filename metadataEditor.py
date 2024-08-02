@@ -32,6 +32,11 @@ genre = ""
 image = None
 no_metadata = False
 
+def CleanText():
+    text.config(state=tk.NORMAL)  
+    text.delete(1.0, tk.END) 
+    text.config(state=tk.DISABLED)  
+
 def PrintText(message, color):
 
     text.config(state=tk.NORMAL)  # Allow text insertion
@@ -65,12 +70,16 @@ def PrintText(message, color):
 def get_file_path():
     global file_path, file_name
     file_path = filedialog.askopenfilename()
-    file_name = file_path.split("/")[-1]
-    
-    get_file_metadata(file_path)
-    if not e1:
-        show_entry_fields()
-    update_entry_fields()
+    if(file_path != ""):
+        if(file_path.endswith(".mp3") or file_path.endswith(".flac")):
+            file_name = file_path.split("/")[-1]
+            get_file_metadata(file_path)
+            if not e1:
+                show_entry_fields()
+            update_entry_fields()
+        else:
+            CleanText()
+            PrintText("Invalid file format. Please select an MP3 or FLAC file\n", "red")
 
 def show_entry_fields():
     global e1, e2, e3, e4, e5, lyric_text_field, image_label, no_img_text
@@ -210,7 +219,7 @@ def get_file_metadata(file_path):
         else:
             lyrics = audio.get("lyrics", [""])[0]
         
-        text.delete(1.0, tk.END)
+        CleanText()
         PrintText("File loaded successfully: " + file_name + "\n", "default")
     else:
         song_name = ""
@@ -221,8 +230,8 @@ def get_file_metadata(file_path):
         genre = ""
         image = None
         no_metadata = True
-        text.delete(1.0, tk.END)
-        PrintText("File loaded successfully: " + file_name + "\n", "green")
+        CleanText()
+        PrintText("File loaded successfully: " + file_name + "\n", "default")
         PrintText("No metadata found for file: " + file_name + "\n", "yellow")
 
 def get_cover_art():
@@ -242,8 +251,11 @@ def is_tag(value):
 
 def search_lyrics_online():
     global lyrics
+    i=0
+    outputs = getVariables(artist, song_name, album)
 
-    for output in getVariables(artist, song_name, album): 
+    #print("outputs length: ", len(outputs))
+    for output in outputs: 
         array = []
         for value in output:
             array.append(value)
@@ -253,7 +265,18 @@ def search_lyrics_online():
             tag, message = array[0], array[1]
         else:
             message, tag = array[0], array[1]
-        PrintText(message, tag)
+        #print("got ", i+1, " message from function" )
+        if len(outputs) == 3:
+            #print("length is 3 -> ", i)
+            if(i==2): 
+                lyric_text_field.delete(1.0, tk.END)
+                lyric_text_field.insert(tk.END, message)
+            else: 
+                PrintText(message, tag)
+        else:
+            #print("now printed ", i+1, " message")
+            PrintText(message, tag)
+        i+=1
 
     update_entry_fields()
 

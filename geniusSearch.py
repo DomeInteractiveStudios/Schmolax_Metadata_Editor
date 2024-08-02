@@ -2,13 +2,14 @@ import requests
 from bs4 import BeautifulSoup
 import re
 
-outputs = []
+outputs = [] # List to hold the outputs of the search
 
 # Global variables
 global artistName, songName, albumName
 
 def getVariables(artist, song_name, album):
     global artistName, songName, albumName
+    outputs.clear() # Clear the outputs list before starting a new search
 
     artistName = artist
     songName = song_name
@@ -50,10 +51,20 @@ def RipLyrics(lyrics_path):
         # Remove non-ASCII and non-printable characters
         lyrics_text = re.sub(r'[^\x00-\x7F]+', '', lyrics_text)
 
-        print(lyrics_text)
+        outputs.append((
+            lyrics_text, 
+            "default"
+        ))
+
     else:
-        print("We're sorry, lyrics could not be retrieved for this song.\nHere's the link to the page, so you can add them manually.")
-        print(lyrics_path)
+        outputs.append((
+            "We're sorry, lyrics could not be retrieved for this song.\nHere's the link to the page, so you can add them manually.\n", 
+            "yellow"
+        ))
+        outputs.append((
+            lyrics_path, 
+            "blue"
+        ))
 
 def main():
     lyrics_path = "https://genius.com/"+artistName+"-"+songName+"-lyrics"
@@ -127,5 +138,4 @@ def main():
 
 def PrintText(message, color):
     # Placeholder for the PrintText function
-    # You can replace this with your actual implementation
     print(f"{color}: {message}")
