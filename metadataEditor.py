@@ -5,8 +5,10 @@ import re
 from tkinter import filedialog, ttk
 from PIL import Image, ImageTk
 import mutagen
+from mutagen.mp3 import MP3
 from mutagen.id3 import ID3, USLT, TIT2, TPE1, TALB, TDRC, TCON, APIC, TPE2, TCOM, TRCK, TPOS, COMM, TXXX
 from mutagen.flac import FLAC, Picture
+from mutagen.wave import WAVE 
 import ctypes
 from io import BytesIO
 file_path = ""
@@ -46,6 +48,15 @@ bpm = ""
 comment = ""
 lyrics = ""
 image = None
+
+#Read Only Metadata Fields
+kind = ""
+duration = ""
+size = ""
+bit_rate = ""
+sample_rate = ""
+sample_size = ""
+channels = ""
 
 # Flags to check metadata completion
 no_metadata = False
@@ -157,14 +168,17 @@ def show_entry_fields(origin):
     tab1 = tk.Frame(notebook, width=380, height=600)
     tab2 = tk.Frame(notebook, width=380, height=600)
     tab3 = tk.Frame(notebook, width=380, height=600)
+    tab4 = tk.Frame(notebook, width=380, height=600)
 
     tab1.grid_propagate(False)
     tab2.grid_propagate(False)
     tab3.grid_propagate(False)
+    tab4.grid_propagate(False)
 
-    notebook.add(tab1, text='Song Metadata')
+    notebook.add(tab1, text='Song Info')
     notebook.add(tab2, text='Lyrics')
     notebook.add(tab3, text='Cover Art')
+    notebook.add(tab4, text='Read Only')
 
     # Add an image to tab3
     image_label = tk.Label(tab3)
@@ -231,6 +245,24 @@ def show_entry_fields(origin):
     e9.grid(row=10, column=1, padx=10, pady=5, sticky="w")
     e10.grid(row=11, column=1, padx=10, pady=5, sticky="w")
     e11.grid(row=12, column=1, padx=10, pady=5, sticky="w")
+
+    # Read Only Metadata Fields Tab
+    tk.Label(tab4, text="Kind: ").grid(row=2, column=0, padx=10, pady=5, sticky="e")
+    tk.Label(tab4, text="Duration: ").grid(row=3, column=0, padx=10, pady=5, sticky="e")
+    tk.Label(tab4, text="Size: ").grid(row=4, column=0, padx=10, pady=5, sticky="e")
+    tk.Label(tab4, text="Bit Rate: ").grid(row=5, column=0, padx=10, pady=5, sticky="e")
+    tk.Label(tab4, text="Sample Rate: ").grid(row=6, column=0, padx=10, pady=5, sticky="e")
+    tk.Label(tab4, text="Sample Size: ").grid(row=7, column=0, padx=10, pady=5, sticky="e")
+    tk.Label(tab4, text="Channels: ").grid(row=8, column=0, padx=10, pady=5, sticky="e")
+
+    tk.Label(tab4, text=kind).grid(row=2, column=1, padx=10, pady=5, sticky="e")
+    tk.Label(tab4, text=duration).grid(row=3, column=1, padx=10, pady=5, sticky="e")
+    tk.Label(tab4, text=size).grid(row=4, column=1, padx=10, pady=5, sticky="e")
+    tk.Label(tab4, text=bit_rate).grid(row=5, column=1, padx=10, pady=5, sticky="e")
+    tk.Label(tab4, text=sample_rate).grid(row=6, column=1, padx=10, pady=5, sticky="e")
+    tk.Label(tab4, text=sample_size).grid(row=7, column=1, padx=10, pady=5, sticky="e")
+    tk.Label(tab4, text=channels).grid(row=8, column=1, padx=10, pady=5, sticky="e")
+
 
 def update_entry_fields():
     global lyrics
@@ -301,6 +333,7 @@ def update_image():
 
 def get_file_metadata(file_path):
     global song_name, artist, album, album_artist, composer, track_number, total_tracks, disc_number, total_discs, year, lyrics, genre, bpm, comment, image, no_metadata
+    global kind, duration, size, bit_rate, sample_rate, sample_size, channels, encoding
     no_metadata = False
     audio = mutagen.File(file_path, easy=True)
     
@@ -356,7 +389,7 @@ def get_file_metadata(file_path):
                 image = audio.pictures[0].data
         else:
             lyrics = audio.get("lyrics", [""])[0]
-        
+
         CleanText()
         PrintText("File loaded successfully: " + file_name + "\n", "default")
     else:
@@ -379,6 +412,50 @@ def get_file_metadata(file_path):
         CleanText()
         PrintText("File loaded successfully: " + file_name + "\n", "default")
         PrintText("No metadata found for file: " + file_name + "\n", "yellow")
+
+    def audio_duration(length): 
+        hours = length // 3600  # calculate in hours 
+        length %= 3600
+        mins = length // 60  # calculate in minutes 
+        length %= 60
+        seconds = length  # calculate in seconds 
+  
+        return hours, mins, seconds  # returns the duration 
+
+    # Read Only Metadata Fields
+    if file_path.endswith(".mp3") and audio: 
+        audio_temp = MP3(file_path)
+        kind = "MP3 File"
+        length = int(audio_temp.info.length)
+        hours, mins, seconds = audio_duration(length) # get the duration of the audio file
+        duration = f"{hours} : {mins} : {seconds}"
+        temp_size = os.stat(file_path).st_size / (1024 * 1024) # convert size to MB
+        size = f"{temp_size:.2f} MB"
+        bit_rate = f"{audio_temp.info.bitrate // 1000} kbps"
+        #print(f"size in bytes: {os.stat(file_path).st_size * 8} bits\nchannels: {audio_temp.info.channels}\nsample rate: {audio_temp.info.sample_rate} Hz\nduration: {length} s")
+        sample_size = f"{((os.stat(file_path).st_size * 8)/(audio_temp.info.channels * audio_temp.info.sample_rate * length)):.0f} bits"
+        sample_rate = f"{(audio_temp.info.sample_rate // 1000):.2f} kHz"
+        channels = audio_temp.info.channels
+    elif file_path.endswith(".flac") and audio:
+        kind = "FLAC File"
+        audio_temp = FLAC(file_path)
+        length = int(audio_temp.info.length)
+        hours, mins, seconds = audio_duration(length) # get the duration of the audio file
+        duration = f"{hours} : {mins} : {seconds}"
+        temp_size = os.stat(file_path).st_size / (1024 * 1024) # convert size to MB
+        size = f"{temp_size:.2f} MB"
+        bit_rate = f"{audio_temp.info.bitrate // 1000} kbps"
+        sample_size = f"{((os.stat(file_path).st_size * 8)/(audio_temp.info.channels * audio_temp.info.sample_rate * length)):.0f} bits"
+        sample_rate = f"{(audio_temp.info.sample_rate // 1000):.2f} kHz"
+        channels = audio_temp.info.channels
+    else:
+        kind = "unknown"
+        duration = "unknown"
+        size = "unknown"
+        bit_rate = "unknown"
+        sample_size = "unknown"
+        sample_rate = "unknown"
+        channels = "unknown"
 
 def get_cover_art():
     global image

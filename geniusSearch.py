@@ -76,14 +76,19 @@ def RipLyrics(lyrics_path):
         ))
 
     else:
-        outputs.append((
-            "We're sorry, lyrics could not be retrieved for this song.\nHere's the link to the page, so you can add them manually.\n", 
-            "yellow"
-        ))
-        outputs.append((
-            lyrics_path, 
-            "blue"
-        ))
+        if soup.find(class_='LyricsPlaceholder__Message-uen8er-2 gotKKY'):
+            lyrics_containers = soup.find_all(class_='LyricsPlaceholder__Message-uen8er-2 gotKKY')
+            lyrics_text = lyrics_containers[0].text
+            outputs.append((lyrics_text, "default"))
+        else: 
+            outputs.append((
+                "We're sorry, lyrics could not be retrieved for this song.\nHere's the link to the page, so you can add them manually.\n", 
+                "yellow"
+            ))
+            outputs.append((
+                lyrics_path + "\n", 
+                "blue"
+            ))
 
 def main():
     lyrics_path = "https://genius.com/"+artistName+"-"+songName+"-lyrics"
@@ -125,7 +130,7 @@ def main():
                     "yellow"
                 ))
                 outputs.append((
-                    artist_path, 
+                    artist_path + "\n", 
                     "blue"
                 ))
                 #webbrowser.open(artist_path)
@@ -139,7 +144,7 @@ def main():
                 "yellow"
             ))
             outputs.append((
-                albumPath, 
+                albumPath + "\n", 
                 "blue"
             ))
             #webbrowser.open(albumPath)
