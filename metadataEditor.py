@@ -4,7 +4,7 @@ import re
 from tkinter import filedialog, ttk
 from PIL import Image, ImageTk
 import mutagen
-from mutagen.id3 import ID3, USLT, TIT2, TPE1, TALB, TDRC, TCON, APIC
+from mutagen.id3 import ID3, USLT, TIT2, TPE1, TALB, TDRC, TCON, APIC, TPE2, TCOM, TRCK, TPOS, COMM, TXXX
 from mutagen.flac import FLAC, Picture
 import ctypes
 from io import BytesIO
@@ -17,20 +17,38 @@ from geniusSearch import getVariables
 e1 = None  # Song Name field
 e2 = None  # Artist field
 e3 = None  # Album field
-e4 = None  # Year field
-e5 = None  # Genre field
+e4 = None  # Abum Artist field
+e5 = None  # Composer field
+e6 = None  # Track Number field
+e7 = None  # Disc Number field
+e8 = None  # Year field
+e9 = None  # Genre field
+e10 = None # BPM field
+e11 = None # Comment field
 lyric_text_field = None  # Lyrics field
 image_label = None  # Image label field
 no_img_text = None  # Placeholder for no image
 
+# Metadata fields
 song_name = ""
 artist = ""
 album = ""
+album_artist = ""
+composer = ""
+track_number = ""
+total_tracks = ""
+disc_number = ""
+total_discs = ""
 year = ""
-lyrics = ""
 genre = ""
+bpm = ""
+comment = ""
+lyrics = ""
 image = None
+
+# Flags to check metadata completion
 no_metadata = False
+partial_metadata = False
 
 def CleanText():
     text.config(state=tk.NORMAL)  
@@ -82,7 +100,7 @@ def get_file_path():
             PrintText("Invalid file format. Please select an MP3 or FLAC file\n", "red")
 
 def show_entry_fields():
-    global e1, e2, e3, e4, e5, lyric_text_field, image_label, no_img_text
+    global e1, e2, e3, e4, e5, e6, es6, e7, es7, e8, e9, e10, e11, lyric_text_field, image_label, no_img_text
 
     # Create a notebook widget for tabs
     notebook = ttk.Notebook(root)
@@ -128,20 +146,44 @@ def show_entry_fields():
     tk.Label(tab1, text="Song Name").grid(row=2, column=0, padx=10, pady=5, sticky="e")
     tk.Label(tab1, text="Artist").grid(row=3, column=0, padx=10, pady=5, sticky="e")
     tk.Label(tab1, text="Album").grid(row=4, column=0, padx=10, pady=5, sticky="e")
-    tk.Label(tab1, text="Year").grid(row=5, column=0, padx=10, pady=5, sticky="e")
-    tk.Label(tab1, text="Genre").grid(row=6, column=0, padx=10, pady=5, sticky="e")
+    tk.Label(tab1, text="Album Artist").grid(row=5, column=0, padx=10, pady=5, sticky="e")
+    tk.Label(tab1, text="Composer").grid(row=6, column=0, padx=10, pady=5, sticky="e")
+    tk.Label(tab1, text="Track Number").grid(row=7, column=0, padx=10, pady=5, sticky="e")
+    tk.Label(tab1, text=" of ").grid(row=7, column=2, padx=10, pady=5, sticky="e")
+    tk.Label(tab1, text="Disc Number").grid(row=8, column=0, padx=10, pady=5, sticky="e")
+    tk.Label(tab1, text=" of ").grid(row=8, column=2, padx=10, pady=5, sticky="e")
+    tk.Label(tab1, text="Year").grid(row=9, column=0, padx=10, pady=5, sticky="e")
+    tk.Label(tab1, text="Genre").grid(row=10, column=0, padx=10, pady=5, sticky="e")
+    tk.Label(tab1, text="BPM").grid(row=11, column=0, padx=10, pady=5, sticky="e")
+    tk.Label(tab1, text="Comment").grid(row=12, column=0, padx=10, pady=5, sticky="e")
 
     e1 = tk.Entry(tab1)
     e2 = tk.Entry(tab1)
     e3 = tk.Entry(tab1)
     e4 = tk.Entry(tab1)
     e5 = tk.Entry(tab1)
+    e6 = tk.Entry(tab1)
+    es6 = tk.Entry(tab1)
+    e7 = tk.Entry(tab1)
+    es7 = tk.Entry(tab1)
+    e8 = tk.Entry(tab1)
+    e9 = tk.Entry(tab1)
+    e10 = tk.Entry(tab1)
+    e11 = tk.Entry(tab1)
 
     e1.grid(row=2, column=1, padx=10, pady=5, sticky="w")
     e2.grid(row=3, column=1, padx=10, pady=5, sticky="w")
     e3.grid(row=4, column=1, padx=10, pady=5, sticky="w")
     e4.grid(row=5, column=1, padx=10, pady=5, sticky="w")
     e5.grid(row=6, column=1, padx=10, pady=5, sticky="w")
+    e6.grid(row=7, column=1, padx=10, pady=5, sticky="w")
+    es6.grid(row=7, column=3, padx=10, pady=5, sticky="w")
+    e7.grid(row=8, column=1, padx=10, pady=5, sticky="w")
+    es7.grid(row=8, column=3, padx=10, pady=5, sticky="w")
+    e8.grid(row=9, column=1, padx=10, pady=5, sticky="w")
+    e9.grid(row=10, column=1, padx=10, pady=5, sticky="w")
+    e10.grid(row=11, column=1, padx=10, pady=5, sticky="w")
+    e11.grid(row=12, column=1, padx=10, pady=5, sticky="w")
 
 def update_entry_fields():
     global lyrics
@@ -156,14 +198,38 @@ def update_entry_fields():
         e3.insert(0, album)
     if e4:
         e4.delete(0, tk.END)
-        e4.insert(0, year)
+        e4.insert(0, album_artist)
+    if e5:
+        e5.delete(0, tk.END)
+        e5.insert(0, composer)
+    if e6:
+        e6.delete(0, tk.END)
+        e6.insert(0, track_number)
+    if es6:
+        es6.delete(0, tk.END)
+        es6.insert(0, total_tracks)
+    if e7:
+        e7.delete(0, tk.END)
+        e7.insert(0, disc_number)
+    if es7:
+        es7.delete(0, tk.END)
+        es7.insert(0, total_discs)
+    if e8:
+        e8.delete(0, tk.END)
+        e8.insert(0, year)
+    if e9:
+        e9.delete(0, tk.END)
+        e9.insert(0, genre)
+    if e10:
+        e10.delete(0, tk.END)
+        e10.insert(0, bpm)
+    if e11:
+        e11.delete(0, tk.END)
+        e11.insert(0, comment)
     if lyric_text_field:
         lyrics_to_display = lyrics.replace('\r', '\n').replace('\u2005', ' ')
         lyric_text_field.delete(1.0, tk.END)
         lyric_text_field.insert(tk.END, lyrics_to_display)
-    if e5:
-        e5.delete(0, tk.END)
-        e5.insert(0, genre)
 
     if image_label:
         update_image()
@@ -187,7 +253,7 @@ def update_image():
             PrintText("Invalid image format. Please select a JPG/JPEG file\n", "red")
 
 def get_file_metadata(file_path):
-    global song_name, artist, album, year, lyrics, genre, image, no_metadata
+    global song_name, artist, album, album_artist, composer, track_number, total_tracks, disc_number, total_discs, year, lyrics, genre, bpm, comment, image, no_metadata
     no_metadata = False
     audio = mutagen.File(file_path, easy=True)
     
@@ -195,10 +261,18 @@ def get_file_metadata(file_path):
         if audio.get("title", [""])[0] != "": song_name = audio.get("title", [""])[0]
         if audio.get("artist", [""])[0] != "": artist = audio.get("artist", [""])[0]
         if audio.get("album", [""])[0] != "": album = audio.get("album", [""])[0]
+        if audio.get("albumartist", [""])[0] != "": album_artist = audio.get("albumartist", [""])[0]
+        if audio.get("composer", [""])[0] != "": composer = audio.get("composer", [""])[0]
+        if audio.get("tracknumber", [""])[0] != "": track_number = audio.get("tracknumber", [""])[0]
+        if audio.get("totaltracks", [""])[0] != "": total_tracks = audio.get("totaltracks", [""])[0]
+        if audio.get("discnumber", [""])[0] != "": disc_number = audio.get("discnumber", [""])[0]
+        if audio.get("totaldiscs", [""])[0] != "": total_discs = audio.get("totaldiscs", [""])[0]
         if audio.get("date", [""])[0] != "": 
             temp_year = audio.get("date", [""])[0]
             year = temp_year.split("-")[0] if temp_year else ""
         if audio.get("genre", [""])[0] != "": genre = audio.get("genre", [""])[0]
+        if audio.get("bpm", [""])[0] != "": bpm = audio.get("bpm", [""])[0]
+        if audio.get("comment", [""])[0] != "": comment = audio.get("comment", [""])[0]
         
         # Check if the file is an MP3 file and use ID3 tags if it is
         if file_path.endswith(".mp3"):
@@ -226,8 +300,16 @@ def get_file_metadata(file_path):
         artist = ""
         album = ""
         year = ""
+        album_artist = ""
+        composer = ""
+        track_number = ""
+        total_tracks = ""
+        disc_number = ""
+        total_discs = ""
         lyrics = ""
         genre = ""
+        bpm = ""
+        comment = ""
         image = None
         no_metadata = True
         CleanText()
@@ -284,26 +366,49 @@ def search_lyrics_online():
 
 
 def apply_changes():
-    global song_name, artist, album, year, lyrics, genre, image, no_metadata
+    global song_name, artist, album, album_artist, composer, track_number, total_tracks, disc_number, total_discs, year, lyrics, genre, bpm, comment, image, no_metadata
 
     song_name = e1.get().strip()
     artist = e2.get().strip()
     album = e3.get().strip()
-    year = e4.get().strip()
-    genre = e5.get().strip()
+    album_artist = e4.get().strip()
+    composer = e5.get().strip()
+    track_number = e6.get().strip()
+    total_tracks = es6.get().strip()
+    disc_number = e7.get().strip()
+    total_discs = es7.get().strip()
+    year = e8.get().strip()
+    genre = e9.get().strip()
+    bpm = e10.get().strip()
+    comment = e11.get().strip()
     lyrics = lyric_text_field.get(1.0, tk.END).strip()
 
     if file_path.endswith(".mp3"):
         audio = ID3(file_path)
         if no_metadata:
             attributes = [("TIT2", song_name), ("TPE1", artist), ("TALB", album),
-                          ("TDRC", year), ("TCON", genre), ("USLT", lyrics)]
+                          ("TDRC", year), ("TCON", genre), ("USLT", lyrics),
+                          ("TPE2", album_artist), ("TCOM", composer),
+                          ("TRCK", track_number), ("TPOS", disc_number),
+                          ("TXXX:totaltracks", total_tracks), ("TXXX:totaldiscs", total_discs),
+                          ("TBPM", bpm), ("COMM", comment)]
             for tag, value in attributes:
                 if tag == "USLT":
                     if tag not in audio:
                         audio.add(USLT(encoding=3, lang=u'eng', desc=u'desc', text=value))
                     else:
                         audio[tag] = USLT(encoding=3, lang=u'eng', desc=u'desc', text=value)
+                elif tag == "COMM":
+                    if tag not in audio:
+                        audio.add(COMM(encoding=3, lang=u'eng', desc=u'desc', text=value))
+                    else:
+                        audio[tag] = COMM(encoding=3, lang=u'eng', desc=u'desc', text=value)
+                elif tag.startswith("TXXX:"):
+                    txxx_key = tag.split(":")[1]
+                    if txxx_key not in audio:
+                        audio.add(TXXX(encoding=3, desc=txxx_key, text=value))
+                    else:
+                        audio[tag] = TXXX(encoding=3, desc=txxx_key, text=value)
                 else:
                     if tag not in audio:
                         audio.add(eval(f"{tag}(encoding=3, text=value)"))
@@ -334,6 +439,30 @@ def apply_changes():
                 audio.add(USLT(encoding=3, lang=u'eng', desc=u'desc', text=lyrics))
             else:
                 audio["USLT"] = USLT(encoding=3, lang=u'eng', desc=u'desc', text=lyrics)
+            if "TPE2" not in audio:
+                audio.add(TPE2(encoding=3, text=album_artist))
+            else:
+                audio["TPE2"] = TPE2(encoding=3, text=album_artist)
+            if "TCOM" not in audio:
+                audio.add(TCOM(encoding=3, text=composer))
+            else:
+                audio["TCOM"] = TCOM(encoding=3, text=composer)
+            if "TRCK" not in audio:
+                audio.add(TRCK(encoding=3, text=track_number))
+            else:
+                audio["TRCK"] = TRCK(encoding=3, text=track_number)
+            if "TPOS" not in audio:
+                audio.add(TPOS(encoding=3, text=disc_number))
+            else:
+                audio["TPOS"] = TPOS(encoding=3, text=disc_number)
+            if "TXXX:totaltracks" not in audio:
+                audio.add(TXXX(encoding=3, desc="totaltracks", text=total_tracks))
+            else:
+                audio["TXXX:totaltracks"] = TXXX(encoding=3, desc="totaltracks", text=total_tracks)
+            if "TXXX:totaldiscs" not in audio:
+                audio.add(TXXX(encoding=3, desc="totaldiscs", text=total_discs))
+            else:
+                audio["TXXX:totaldiscs"] = TXXX(encoding=3, desc="totaldiscs", text=total_discs)
         if image:
             if "APIC" in audio:
                 audio.delall("APIC")
@@ -346,6 +475,14 @@ def apply_changes():
         audio["album"] = album
         audio["date"] = year
         audio["genre"] = genre
+        audio["albumartist"] = album_artist
+        audio["composer"] = composer
+        audio["tracknumber"] = track_number
+        audio["discnumber"] = disc_number
+        audio["totaltracks"] = total_tracks
+        audio["totaldiscs"] = total_discs
+        audio["bpm"] = bpm
+        audio["comment"] = comment
         if lyrics:
             audio["LYRICS"] = lyrics
         if image:
@@ -364,6 +501,14 @@ def apply_changes():
         audio["date"] = year
         audio["genre"] = genre
         audio["lyrics"] = lyrics
+        audio["albumartist"] = album_artist
+        audio["composer"] = composer
+        audio["tracknumber"] = track_number
+        audio["discnumber"] = disc_number
+        audio["totaltracks"] = total_tracks
+        audio["totaldiscs"] = total_discs
+        audio["bpm"] = bpm
+        audio["comment"] = comment
         audio.save()
 
 def save_changes():
