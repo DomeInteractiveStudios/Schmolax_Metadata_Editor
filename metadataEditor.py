@@ -325,7 +325,11 @@ def get_file_metadata(file_path):
         else: total_discs = ""
         if audio.get("date", [""])[0] != "": 
             temp_year = audio.get("date", [""])[0]
-            year = temp_year.split("-")[0] if temp_year else ""
+            dateSegments = []
+            if "-" in temp_year: dateSegments = temp_year.split("-")
+            for segment in dateSegments: #since the date inside the metadata isn't always in the same format, i get the year by being the only 4 digit number in the date
+                if len(segment) == 4: year = segment
+                else: year = ""
         else: year = ""
         if audio.get("genre", [""])[0] != "": genre = audio.get("genre", [""])[0]
         else: genre = ""

@@ -1,6 +1,7 @@
 import requests
 from bs4 import BeautifulSoup
 import re
+import unicodedata
 
 outputs = [] # List to hold the outputs of the search
 
@@ -14,10 +15,14 @@ def getVariables(artist, song_name, album):
     artistName = artist
     songName = song_name
     albumName = album
-    
-    songName = songName.replace(" ", "-").lower()
-    artistName = artistName.replace(" ", "-").lower()
-    albumName = albumName.replace(" ", "-").lower()
+    # Remove accents from the names
+    songName = unicodedata.normalize('NFKD', songName).encode('ASCII', 'ignore').decode('utf-8')
+    artistName = unicodedata.normalize('NFKD', artistName).encode('ASCII', 'ignore').decode('utf-8')
+    albumName = unicodedata.normalize('NFKD', albumName).encode('ASCII', 'ignore').decode('utf-8')
+    # Convert the names to lowercase and replace spaces with hyphens and remove brackets from the names
+    songName = songName.replace(" ", "-").replace("(", "").replace(")", "").replace("'", "").replace(",", "").lower()
+    artistName = artistName.replace(" ", "-").replace("(", "").replace(")", "").replace("'", "").replace(",", "").lower()
+    albumName = albumName.replace(" ", "-").replace("(", "").replace(")", "").replace("'", "").replace(",", "").lower()
 
     main()
 
