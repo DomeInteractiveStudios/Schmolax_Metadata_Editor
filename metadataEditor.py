@@ -92,7 +92,7 @@ def get_file_path():
     i=0 # reset counter
     file_path = filedialog.askopenfilename()
     if(file_path != ""):
-        if len(file_path.split(",")) > 1: # multiple files selected
+        if len(file_path.split("}")) > 1: # multiple files selected
             files = file_path.split(",")
             for file in files:
                 if(file.endswith(".mp3") or file.endswith(".flac")):

@@ -19,10 +19,24 @@ def getVariables(artist, song_name, album):
     songName = unicodedata.normalize('NFKD', songName).encode('ASCII', 'ignore').decode('utf-8')
     artistName = unicodedata.normalize('NFKD', artistName).encode('ASCII', 'ignore').decode('utf-8')
     albumName = unicodedata.normalize('NFKD', albumName).encode('ASCII', 'ignore').decode('utf-8')
-    # Convert the names to lowercase and replace spaces with hyphens and remove brackets from the names
-    songName = songName.replace(" ", "-").replace("(", "").replace(")", "").replace("'", "").replace(",", "").lower()
-    artistName = artistName.replace(" ", "-").replace("(", "").replace(")", "").replace("'", "").replace(",", "").lower()
-    albumName = albumName.replace(" ", "-").replace("(", "").replace(")", "").replace("'", "").replace(",", "").lower()
+    # Convert the names to lowercase and replace certain characters
+    replacements = [
+        (" ", "-"),
+        ("(", ""),
+        (")", ""),
+        ("'", ""),
+        (",", ""),
+        (".", ""),  # Dots should be replaced by hyphens, but since after a dot there is almost always a space, it is not necessary
+        ("&", "and")
+    ]
+
+    # Apply the replacements
+    for char, replacement in replacements:
+        songName = songName.replace(char, replacement).lower()
+        artistName = artistName.replace(char, replacement).lower()
+        albumName = albumName.replace(char, replacement).lower()
+        
+    print(f"Artist: {artistName}\nSong: {songName}\nAlbum: {albumName}\n")
 
     main()
 
