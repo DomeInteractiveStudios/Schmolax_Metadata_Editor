@@ -1,3 +1,4 @@
+import os
 import tkinter as tk
 import webbrowser
 import re
@@ -48,7 +49,8 @@ image = None
 
 # Flags to check metadata completion
 no_metadata = False
-partial_metadata = False
+multipleFiles = False
+i=0 # counter for multiple files
 
 def CleanText():
     text.config(state=tk.NORMAL)  
@@ -87,23 +89,68 @@ def PrintText(message, color):
 
 def get_file_path():
     global file_path, file_name
+    i=0 # reset counter
     file_path = filedialog.askopenfilename()
     if(file_path != ""):
-        if(file_path.endswith(".mp3") or file_path.endswith(".flac")):
+        if len(file_path.split(",")) > 1: # multiple files selected
+            files = file_path.split(",")
+            for file in files:
+                if(file.endswith(".mp3") or file.endswith(".flac")):
+                    i+=1
+                    handle_multiple_files(file)
+                else: 
+                    CleanText()
+                    PrintText("Invalid file format. Please select an MP3 or FLAC file)\n", "red")
+        else:
+            if(file_path.endswith(".mp3") or file_path.endswith(".flac")):
+                file_name = file_path.split("/")[-1]
+                get_file_metadata(file_path)
+                if not e1:
+                    show_entry_fields(root)
+                update_entry_fields()
+            else:
+                CleanText()
+                PrintText("Invalid file format. Please select an MP3 or FLAC file\n", "red")
+
+def get_folder_path():
+    global folder_path
+    i=0 # reset counter
+    folder_path = filedialog.askdirectory()
+    if(folder_path != ""):
+        PrintText("Folder path selected: " + folder_path + "\n", "default")
+        files = os.listdir(folder_path)
+        for file in files:
+            print(file)
+            file_path = os.path.join(folder_path, file)
+            if os.path.isfile(file_path):
+                i+=1
+                handle_multiple_files(file_path)
+    
+def handle_multiple_files(file):
+    global file_path, file_name, multipleFiles
+    file_path = file
+    if(i>1):
+        multipleFiles = True
+        notebook = ttk.Notebook(root)
+        notebook.grid(row=3, column=0, columnspan=2, padx=10, pady=10)
+        tab = tk.Frame(notebook, width=380, height=600)
+        tab.grid_propagate(False)
+        notebook.add(tab, text=file_name)
+        if file_path.endswith(".mp3") or file_path.endswith(".flac"):
             file_name = file_path.split("/")[-1]
             get_file_metadata(file_path)
             if not e1:
-                show_entry_fields()
+                show_entry_fields(tab)
             update_entry_fields()
-        else:
-            CleanText()
-            PrintText("Invalid file format. Please select an MP3 or FLAC file\n", "red")
+    else:
+        CleanText()
+        PrintText("Invalid file format. Please select an MP3 or FLAC file\n", "red")
 
-def show_entry_fields():
+def show_entry_fields(origin):
     global e1, e2, e3, e4, e5, e6, es6, e7, es7, e8, e9, e10, e11, lyric_text_field, image_label, no_img_text
 
     # Create a notebook widget for tabs
-    notebook = ttk.Notebook(root)
+    notebook = ttk.Notebook(origin)
     notebook.grid(row=3, column=0, columnspan=2, padx=10, pady=10)
 
     # Create frames for the tabs
@@ -259,20 +306,33 @@ def get_file_metadata(file_path):
     
     if audio:
         if audio.get("title", [""])[0] != "": song_name = audio.get("title", [""])[0]
+        else: song_name = file_name.split(".")[0]
         if audio.get("artist", [""])[0] != "": artist = audio.get("artist", [""])[0]
+        else: artist = ""
         if audio.get("album", [""])[0] != "": album = audio.get("album", [""])[0]
+        else: album = ""
         if audio.get("albumartist", [""])[0] != "": album_artist = audio.get("albumartist", [""])[0]
+        else: album_artist = ""
         if audio.get("composer", [""])[0] != "": composer = audio.get("composer", [""])[0]
+        else: composer = ""
         if audio.get("tracknumber", [""])[0] != "": track_number = audio.get("tracknumber", [""])[0]
+        else: track_number = ""
         if audio.get("totaltracks", [""])[0] != "": total_tracks = audio.get("totaltracks", [""])[0]
+        else: total_tracks = ""
         if audio.get("discnumber", [""])[0] != "": disc_number = audio.get("discnumber", [""])[0]
+        else: disc_number = ""
         if audio.get("totaldiscs", [""])[0] != "": total_discs = audio.get("totaldiscs", [""])[0]
+        else: total_discs = ""
         if audio.get("date", [""])[0] != "": 
             temp_year = audio.get("date", [""])[0]
             year = temp_year.split("-")[0] if temp_year else ""
+        else: year = ""
         if audio.get("genre", [""])[0] != "": genre = audio.get("genre", [""])[0]
+        else: genre = ""
         if audio.get("bpm", [""])[0] != "": bpm = audio.get("bpm", [""])[0]
+        else: bpm = ""
         if audio.get("comment", [""])[0] != "": comment = audio.get("comment", [""])[0]
+        else: comment = ""
         
         # Check if the file is an MP3 file and use ID3 tags if it is
         if file_path.endswith(".mp3"):
@@ -538,8 +598,10 @@ canvas.grid(row=0, column=0, columnspan=2, rowspan=6)
 canvas.grid_propagate(False)  # Prevent the canvas from resizing
 
 # Create a button widget for selecting files
-button_select_file = tk.Button(root, text="Select File", command=get_file_path)
+button_select_file = tk.Button(root, text="Open File", command=get_file_path)
 button_select_file.grid(row=0, column=0, columnspan=2, pady=10)
+button_select_folder = tk.Button(root, text="Open Folder", command=get_folder_path)
+button_select_folder.grid(row=1, column=0, columnspan=2, pady=10)
 
 # Create a text widget for displaying status messages
 text = tk.Text(root, height=3, width=50, font=("Californian FB", 12))
