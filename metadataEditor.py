@@ -2,13 +2,13 @@ import os
 import tkinter as tk
 import webbrowser
 import re
+import time
 from tkinter import filedialog, ttk
 from PIL import Image, ImageTk
 import mutagen
 from mutagen.mp3 import MP3
 from mutagen.id3 import ID3, USLT, TIT2, TPE1, TALB, TDRC, TCON, APIC, TPE2, TCOM, TRCK, TPOS, COMM, TXXX
 from mutagen.flac import FLAC, Picture
-from mutagen.wave import WAVE 
 import ctypes
 from io import BytesIO
 file_path = ""
@@ -55,13 +55,24 @@ duration = ""
 size = ""
 bit_rate = ""
 sample_rate = ""
-sample_size = ""
 channels = ""
 
 # Flags to check metadata completion
 no_metadata = False
-multipleFiles = False
-i=0 # counter for multiple files
+multipleFiles = []
+outer_notebooks = []
+
+# block features
+allowMultipleFiles = False
+
+def remove_all_notebooks():
+    #print(f"number of outer notebooks: {len(outer_notebooks)}\n")
+    if len(outer_notebooks) != 0:
+        #print("removing all outer notebooks\n")
+        for notebook in outer_notebooks:
+            #print(f"name: {notebook}\n")
+            notebook.destroy()
+        outer_notebooks.clear()
 
 def CleanText():
     text.config(state=tk.NORMAL)  
@@ -100,62 +111,64 @@ def PrintText(message, color):
 
 def get_file_path():
     global file_path, file_name
-    i=0 # reset counter
     file_path = filedialog.askopenfilename()
-    if(file_path != ""):
-        if len(file_path.split("}")) > 1: # multiple files selected
-            files = file_path.split(",")
-            for file in files:
-                if(file.endswith(".mp3") or file.endswith(".flac")):
-                    i+=1
-                    handle_multiple_files(file)
-                else: 
-                    CleanText()
-                    PrintText("Invalid file format. Please select an MP3 or FLAC file)\n", "red")
-        else:
-            if(file_path.endswith(".mp3") or file_path.endswith(".flac")):
-                file_name = file_path.split("/")[-1]
-                get_file_metadata(file_path)
-                if not e1:
-                    show_entry_fields(root)
-                update_entry_fields()
-            else:
-                CleanText()
-                PrintText("Invalid file format. Please select an MP3 or FLAC file\n", "red")
-
-def get_folder_path():
-    global folder_path
-    i=0 # reset counter
-    folder_path = filedialog.askdirectory()
-    if(folder_path != ""):
-        PrintText("Folder path selected: " + folder_path + "\n", "default")
-        files = os.listdir(folder_path)
-        for file in files:
-            print(file)
-            file_path = os.path.join(folder_path, file)
-            if os.path.isfile(file_path):
-                i+=1
-                handle_multiple_files(file_path)
-    
-def handle_multiple_files(file):
-    global file_path, file_name, multipleFiles
-    file_path = file
-    if(i>1):
-        multipleFiles = True
-        notebook = ttk.Notebook(root)
-        notebook.grid(row=3, column=0, columnspan=2, padx=10, pady=10)
-        tab = tk.Frame(notebook, width=380, height=600)
-        tab.grid_propagate(False)
-        notebook.add(tab, text=file_name)
-        if file_path.endswith(".mp3") or file_path.endswith(".flac"):
+    if file_path:
+        remove_all_notebooks()
+        if len(multipleFiles) != 0: return
+        if(file_path.endswith(".mp3") or file_path.endswith(".flac")):
             file_name = file_path.split("/")[-1]
             get_file_metadata(file_path)
             if not e1:
-                show_entry_fields(tab)
+                show_entry_fields(root)
+            update_entry_fields()
+        else:
+            CleanText()
+            PrintText("Invalid file format. Please select an MP3 or FLAC file\n", "red")
+
+def get_folder_path():
+    if not allowMultipleFiles:
+        PrintText("This feature is not available at the moment\n", "yellow")
+        return
+    folder_path = filedialog.askdirectory()
+    if folder_path:
+        multipleFiles.clear()
+        remove_all_notebooks()  # Clear all previous notebooks
+        print(f"Current number of files in folder: {len(multipleFiles)}")
+        if len(multipleFiles) != 0: return
+        for file in os.listdir(folder_path):
+            if file.endswith(".mp3") or file.endswith(".flac"):
+                multipleFiles.append(os.path.join(folder_path, file))
+        if len(multipleFiles) > 1:
+            print(f"Number of files in folder: {len(multipleFiles)}")
+            notebook = ttk.Notebook(root)
+            notebook.grid(row=3, column=0, columnspan=2, padx=10, pady=10)
+            outer_notebooks.append(notebook)  # Keep track of the outer notebook
+            
+            for i, file_path in enumerate(multipleFiles, start=1):
+                get_file_metadata(file_path)
+
+                tab = ttk.Frame(notebook)
+                notebook.add(tab, text=f'Song {i}')
+
+                inner_notebook = show_entry_fields(tab)
+                
+                if not e1:  # Assuming e1 is a condition to check for the first time
+                    show_entry_fields(inner_notebook)
+                update_entry_fields()
+        else:
+            file_path = multipleFiles[0]
+            get_file_metadata(file_path)
+            if not e1:
+                show_entry_fields(root)
             update_entry_fields()
     else:
         CleanText()
-        PrintText("Invalid file format. Please select an MP3 or FLAC file\n", "red")
+        PrintText("No MP3 or FLAC files found in the folder\n", "red")
+
+    for file in multipleFiles:
+        file_name = file.split("/")[-1]
+        PrintText(f"Song {multipleFiles.index(file) + 1}: {file_name}\n", "default")
+    
 
 def show_entry_fields(origin):
     global e1, e2, e3, e4, e5, e6, es6, e7, es7, e8, e9, e10, e11, lyric_text_field, image_label, no_img_text
@@ -232,19 +245,19 @@ def show_entry_fields(origin):
     e10 = tk.Entry(tab1)
     e11 = tk.Entry(tab1)
 
-    e1.grid(row=2, column=1, padx=10, pady=5, sticky="w")
-    e2.grid(row=3, column=1, padx=10, pady=5, sticky="w")
-    e3.grid(row=4, column=1, padx=10, pady=5, sticky="w")
-    e4.grid(row=5, column=1, padx=10, pady=5, sticky="w")
-    e5.grid(row=6, column=1, padx=10, pady=5, sticky="w")
-    e6.grid(row=7, column=1, padx=10, pady=5, sticky="w")
-    es6.grid(row=7, column=3, padx=10, pady=5, sticky="w")
-    e7.grid(row=8, column=1, padx=10, pady=5, sticky="w")
-    es7.grid(row=8, column=3, padx=10, pady=5, sticky="w")
-    e8.grid(row=9, column=1, padx=10, pady=5, sticky="w")
-    e9.grid(row=10, column=1, padx=10, pady=5, sticky="w")
-    e10.grid(row=11, column=1, padx=10, pady=5, sticky="w")
-    e11.grid(row=12, column=1, padx=10, pady=5, sticky="w")
+    e1.grid(row=2, column=1, padx=10, pady=5, sticky="w") # Song Name
+    e2.grid(row=3, column=1, padx=10, pady=5, sticky="w") # Artist
+    e3.grid(row=4, column=1, padx=10, pady=5, sticky="w") # Album
+    e4.grid(row=5, column=1, padx=10, pady=5, sticky="w") # Album Artist
+    e5.grid(row=6, column=1, padx=10, pady=5, sticky="w") # Composer
+    e6.grid(row=7, column=1, padx=10, pady=5, sticky="w") # Track Number
+    es6.grid(row=7, column=3, padx=10, pady=5, sticky="w") # Total Tracks
+    e7.grid(row=8, column=1, padx=10, pady=5, sticky="w") # Disc Number
+    es7.grid(row=8, column=3, padx=10, pady=5, sticky="w") # Total Discs
+    e8.grid(row=9, column=1, padx=10, pady=5, sticky="w") # Year
+    e9.grid(row=10, column=1, padx=10, pady=5, sticky="w") # Genre
+    e10.grid(row=11, column=1, padx=10, pady=5, sticky="w") # BPM
+    e11.grid(row=12, column=1, padx=10, pady=5, sticky="w") # Comment
 
     # Read Only Metadata Fields Tab
     tk.Label(tab4, text="Kind: ").grid(row=2, column=0, padx=10, pady=5, sticky="e")
@@ -252,16 +265,14 @@ def show_entry_fields(origin):
     tk.Label(tab4, text="Size: ").grid(row=4, column=0, padx=10, pady=5, sticky="e")
     tk.Label(tab4, text="Bit Rate: ").grid(row=5, column=0, padx=10, pady=5, sticky="e")
     tk.Label(tab4, text="Sample Rate: ").grid(row=6, column=0, padx=10, pady=5, sticky="e")
-    tk.Label(tab4, text="Sample Size: ").grid(row=7, column=0, padx=10, pady=5, sticky="e")
-    tk.Label(tab4, text="Channels: ").grid(row=8, column=0, padx=10, pady=5, sticky="e")
+    tk.Label(tab4, text="Channels: ").grid(row=7, column=0, padx=10, pady=5, sticky="e")
 
     tk.Label(tab4, text=kind).grid(row=2, column=1, padx=10, pady=5, sticky="e")
     tk.Label(tab4, text=duration).grid(row=3, column=1, padx=10, pady=5, sticky="e")
     tk.Label(tab4, text=size).grid(row=4, column=1, padx=10, pady=5, sticky="e")
     tk.Label(tab4, text=bit_rate).grid(row=5, column=1, padx=10, pady=5, sticky="e")
     tk.Label(tab4, text=sample_rate).grid(row=6, column=1, padx=10, pady=5, sticky="e")
-    tk.Label(tab4, text=sample_size).grid(row=7, column=1, padx=10, pady=5, sticky="e")
-    tk.Label(tab4, text=channels).grid(row=8, column=1, padx=10, pady=5, sticky="e")
+    tk.Label(tab4, text=channels).grid(row=7, column=1, padx=10, pady=5, sticky="e")
 
 
 def update_entry_fields():
@@ -295,6 +306,7 @@ def update_entry_fields():
         es7.insert(0, total_discs)
     if e8:
         e8.delete(0, tk.END)
+        print(f"given year: {year}")
         e8.insert(0, year)
     if e9:
         e9.delete(0, tk.END)
@@ -333,7 +345,7 @@ def update_image():
 
 def get_file_metadata(file_path):
     global song_name, artist, album, album_artist, composer, track_number, total_tracks, disc_number, total_discs, year, lyrics, genre, bpm, comment, image, no_metadata
-    global kind, duration, size, bit_rate, sample_rate, sample_size, channels, encoding
+    global kind, duration, size, bit_rate, sample_rate, channels, encoding
     no_metadata = False
     audio = mutagen.File(file_path, easy=True)
     
@@ -356,15 +368,20 @@ def get_file_metadata(file_path):
         else: disc_number = ""
         if audio.get("totaldiscs", [""])[0] != "": total_discs = audio.get("totaldiscs", [""])[0]
         else: total_discs = ""
-        if audio.get("date", [""])[0] != "": 
+        if audio.get("date", [""])[0] != "" and len(audio["date"]) > 0: 
+            print(audio.get("date", [""])[0])
             temp_year = audio.get("date", [""])[0]
             dateSegments = []
             if "-" in temp_year: dateSegments = temp_year.split("-")
             for segment in dateSegments: #since the date inside the metadata isn't always in the same format, i get the year by being the only 4 digit number in the date
-                if len(segment) == 4: year = segment
+                print("\n"+ segment + " -> len " + str(len(segment)))
+                if len(segment) == 4: 
+                    year = segment
+                    print(f"{segment} added as year")
                 else: year = ""
         else: year = ""
-        if audio.get("genre", [""])[0] != "": genre = audio.get("genre", [""])[0]
+        # Check if the "genre" key exists and if the associated list is non-empty
+        if "genre" in audio and len(audio["genre"]) > 0 and audio["genre"][0] != "": genre = audio["genre"][0]
         else: genre = ""
         if audio.get("bpm", [""])[0] != "": bpm = audio.get("bpm", [""])[0]
         else: bpm = ""
@@ -419,6 +436,10 @@ def get_file_metadata(file_path):
         mins = length // 60  # calculate in minutes 
         length %= 60
         seconds = length  # calculate in seconds 
+
+        if hours < 10: hours = f"0{hours}"
+        if mins < 10: mins = f"0{mins}"
+        if seconds < 10: seconds = f"0{seconds}"
   
         return hours, mins, seconds  # returns the duration 
 
@@ -433,7 +454,6 @@ def get_file_metadata(file_path):
         size = f"{temp_size:.2f} MB"
         bit_rate = f"{audio_temp.info.bitrate // 1000} kbps"
         #print(f"size in bytes: {os.stat(file_path).st_size * 8} bits\nchannels: {audio_temp.info.channels}\nsample rate: {audio_temp.info.sample_rate} Hz\nduration: {length} s")
-        sample_size = f"{((os.stat(file_path).st_size * 8)/(audio_temp.info.channels * audio_temp.info.sample_rate * length)):.0f} bits"
         sample_rate = f"{(audio_temp.info.sample_rate // 1000):.2f} kHz"
         channels = audio_temp.info.channels
     elif file_path.endswith(".flac") and audio:
@@ -445,7 +465,6 @@ def get_file_metadata(file_path):
         temp_size = os.stat(file_path).st_size / (1024 * 1024) # convert size to MB
         size = f"{temp_size:.2f} MB"
         bit_rate = f"{audio_temp.info.bitrate // 1000} kbps"
-        sample_size = f"{((os.stat(file_path).st_size * 8)/(audio_temp.info.channels * audio_temp.info.sample_rate * length)):.0f} bits"
         sample_rate = f"{(audio_temp.info.sample_rate // 1000):.2f} kHz"
         channels = audio_temp.info.channels
     else:
@@ -453,7 +472,6 @@ def get_file_metadata(file_path):
         duration = "unknown"
         size = "unknown"
         bit_rate = "unknown"
-        sample_size = "unknown"
         sample_rate = "unknown"
         channels = "unknown"
 
