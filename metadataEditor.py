@@ -1,4 +1,5 @@
 import os
+import platform
 import tkinter as tk
 import webbrowser
 import re
@@ -306,7 +307,6 @@ def update_entry_fields():
         es7.insert(0, total_discs)
     if e8:
         e8.delete(0, tk.END)
-        print(f"given year: {year}")
         e8.insert(0, year)
     if e9:
         e9.delete(0, tk.END)
@@ -369,15 +369,14 @@ def get_file_metadata(file_path):
         if audio.get("totaldiscs", [""])[0] != "": total_discs = audio.get("totaldiscs", [""])[0]
         else: total_discs = ""
         if audio.get("date", [""])[0] != "" and len(audio["date"]) > 0: 
-            print(audio.get("date", [""])[0])
             temp_year = audio.get("date", [""])[0]
             dateSegments = []
             if "-" in temp_year: dateSegments = temp_year.split("-")
             for segment in dateSegments: #since the date inside the metadata isn't always in the same format, i get the year by being the only 4 digit number in the date
-                print("\n"+ segment + " -> len " + str(len(segment)))
+                #print("\n"+ segment + " -> len " + str(len(segment)))
                 if len(segment) == 4: 
                     year = segment
-                    print(f"{segment} added as year")
+                    #print(f"{segment} added as year")
                 else: year = ""
         else: year = ""
         # Check if the "genre" key exists and if the associated list is non-empty
@@ -429,6 +428,11 @@ def get_file_metadata(file_path):
         CleanText()
         PrintText("File loaded successfully: " + file_name + "\n", "default")
         PrintText("No metadata found for file: " + file_name + "\n", "yellow")
+
+    #print main info in console
+    if platform.system() == 'Linux': os.system('clear')
+    if platform.system() == 'Windows': os.system('cls')
+    print(f"Song: {song_name}\nArtist: {artist}\nAlbum: {album}\nYear: {audio.get("date", [""])[0]}\n")
 
     def audio_duration(length): 
         hours = length // 3600  # calculate in hours 

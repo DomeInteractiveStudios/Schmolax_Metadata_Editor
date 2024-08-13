@@ -35,8 +35,6 @@ def getVariables(artist, song_name, album):
         songName = songName.replace(char, replacement).lower()
         artistName = artistName.replace(char, replacement).lower()
         albumName = albumName.replace(char, replacement).lower()
-        
-    print(f"Artist: {artistName}\nSong: {songName}\nAlbum: {albumName}\n")
 
     main()
 
@@ -66,9 +64,6 @@ def RipLyrics(lyrics_path):
 
         # Join the list into a single string
         lyrics_text = ''.join(lyrics)
-
-        # Remove non-ASCII and non-printable characters
-        lyrics_text = re.sub(r'[^\x00-\x7F]+', '', lyrics_text)
 
         outputs.append((
             lyrics_text, 
