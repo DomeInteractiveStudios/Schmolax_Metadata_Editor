@@ -3,6 +3,7 @@ import requests
 from bs4 import BeautifulSoup
 import os
 import unicodedata
+import time
 
 save_img = False
 global albumName, artistName
@@ -40,6 +41,9 @@ def main():
     response = requests.get(image_path)
     soup = BeautifulSoup(response.content, 'html.parser')
 
+    time.sleep(1) # Wait for the page to be fully loaded
+
+    # Continue with scraping the page
     table = soup.find('table', class_='tbl')
     tbody = table.find('tbody')
     tr = tbody.find('tr')
@@ -51,9 +55,13 @@ def main():
 
     response = requests.get(full_url)
     soup = BeautifulSoup(response.content, 'html.parser')
+
+    time.sleep(1) # Wait for the page to be fully loaded
+
     # Find the image tag
     image_div = soup.find('div', class_='artwork-cont')
-    image_tag = image_div.find('img')
+    image_p = image_div.find('p', class_='small')
+    image_tag = image_p.find_all('a')[-1]
     #print(image_tag)
 
     # Create a new folder called TempAlbumImage if it doesn't exist
@@ -62,7 +70,7 @@ def main():
         os.makedirs(folder_path)
 
     # Download the album image
-    image_src = image_tag['src']
+    image_src = image_tag['href']
     image_url = f"https:{image_src}"
     if save_img:
         img_name = albumName.replace("+", "_")
