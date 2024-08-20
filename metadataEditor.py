@@ -16,6 +16,7 @@ file_path = ""
 file_name = ""
 
 from geniusSearch import getVariables
+from musicBrainzSearch import GetImgVariables
 
 
 e1 = None  # Song Name field
@@ -206,8 +207,8 @@ def show_entry_fields(origin):
         no_img_text.configure(state=tk.DISABLED)
     
     # Add change cover art button
-    button_change_cover = tk.Button(tab3, text="Change Cover Art", command=get_cover_art)
-    button_change_cover.grid(row=2, column=0, columnspan=2, padx=20, pady=10)
+    button_change_cover = tk.Button(tab3, text="Change Cover Art", command=get_cover_art).grid(row=2, column=0, columnspan=2, padx=20, pady=10)
+    button_search_cover = tk.Button(tab3, text="Search Cover Art Online", command=search_cover_art_online).grid(row=3, column=0, columnspan=2, padx=20, pady=10)
 
     # Add a new text field to tab2
     lyric_text_field = tk.Text(tab2, height=30, width=40, wrap=tk.WORD)
@@ -526,7 +527,8 @@ def search_lyrics_online():
 
     update_entry_fields()
 
-
+def search_cover_art_online():
+    GetImgVariables(artist, album)
 
 def apply_changes():
     global song_name, artist, album, album_artist, composer, track_number, total_tracks, disc_number, total_discs, year, lyrics, genre, bpm, comment, image, no_metadata

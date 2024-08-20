@@ -1,6 +1,5 @@
 import requests
 from bs4 import BeautifulSoup
-import re
 import unicodedata
 
 outputs = [] # List to hold the outputs of the search
