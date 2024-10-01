@@ -3,17 +3,26 @@ from bs4 import BeautifulSoup
 import unicodedata
 
 outputs = [] # List to hold the outputs of the search
+global failed
 
 # Global variables
 global artistName, songName, albumName
+global backupArtistName, backupSongName
 
 def getVariables(artist, song_name, album):
-    global artistName, songName, albumName
+    global artistName, songName, albumName, failed
+    global backupArtistName, backupSongName
+    failed = False
     outputs.clear() # Clear the outputs list before starting a new search
 
     artistName = artist
     songName = song_name
     albumName = album
+
+    #these are needed for the recursive search
+    backupArtistName = artist
+    backupSongName = song_name
+
     # Remove accents from the names
     songName = unicodedata.normalize('NFKD', songName).encode('ASCII', 'ignore').decode('utf-8')
     artistName = unicodedata.normalize('NFKD', artistName).encode('ASCII', 'ignore').decode('utf-8')
@@ -85,6 +94,7 @@ def RipLyrics(lyrics_path):
             ))
 
 def main():
+    global artistName, songName, albumName, failed
     lyrics_path = "https://genius.com/"+artistName+"-"+songName+"-lyrics"
     response = requests.head(lyrics_path)
     lyricsNotFound = response.status_code == 404 
@@ -115,19 +125,34 @@ def main():
                     "red"
                 ))
             else:
-                outputs.append((
-                    "Artist status code: " + response.status_code.__str__() + "\n",
-                    "green"
-                ))
-                outputs.append((
-                    "We could not find the lyrics for the song you are looking for.\nHere's the artist page, maybe you can find the song and add the lyrics manually.\n", 
-                    "yellow"
-                ))
-                outputs.append((
-                    artist_path + "\n", 
-                    "blue"
-                ))
-                #webbrowser.open(artist_path)
+                if failed:
+                    outputs.append((
+                        "Artist status code: " + response.status_code.__str__() + "\n",
+                        "green"
+                    ))
+                    outputs.append((
+                        "We could not find the lyrics for the song you are looking for.\nHere's the artist page, maybe you can find the song and add the lyrics manually.\n", 
+                        "yellow"
+                    ))
+                    outputs.append((
+                        artist_path + "\n", 
+                        "blue"
+                    ))
+                    #webbrowser.open(artist_path)
+                else:
+                    failed = True
+                    cuts = [
+                        "(", "feat", "with", "ft", "and", "&", "prod", "prod.", "produced", "by", "remix", "remixed", "remixes", "remixing"
+                    ]
+                    for cut in cuts:
+                        if cut in backupArtistName:
+                            artistName = backupArtistName.split(cut)
+                        if cut in backupSongName:
+                            songName = backupSongName.split(cut)
+
+                    print(f"Hold on this is a tough one, let me try something else\nSong Name {songName}\nArtist Name {artistName}\nAlbum Name {albumName}")
+
+                    main()
         else:
             outputs.append((
                 "Album status code: " + response.status_code.__str__() + "\n", 

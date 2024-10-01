@@ -8,7 +8,7 @@ from tkinter import filedialog, ttk
 from PIL import Image, ImageTk
 import mutagen
 from mutagen.mp3 import MP3
-from mutagen.id3 import ID3, USLT, TIT2, TPE1, TALB, TDRC, TCON, APIC, TPE2, TCOM, TRCK, TPOS, COMM, TXXX
+from mutagen.id3 import ID3, USLT, TIT2, TPE1, TALB, TDRC, TCON, APIC, TPE2, TCOM, TRCK, TPOS, COMM, TXXX, TBPM
 from mutagen.flac import FLAC, Picture
 import ctypes
 from io import BytesIO
@@ -66,6 +66,9 @@ outer_notebooks = []
 
 # block features
 allowMultipleFiles = False
+
+def openSettings():
+    print("Settings opened")
 
 def remove_all_notebooks():
     #print(f"number of outer notebooks: {len(outer_notebooks)}\n")
@@ -576,7 +579,7 @@ def apply_changes():
                         audio[tag] = TXXX(encoding=3, desc=txxx_key, text=value)
                 else:
                     if tag not in audio:
-                        audio.add(eval(f"{tag}(encoding=3, text=value)"))
+                            audio[tag] = eval(f"{tag}(encoding=3, text=value)")
                     else:
                         audio[tag] = eval(f"{tag}(encoding=3, text=value)")
         else:
@@ -707,6 +710,10 @@ button_select_file = tk.Button(root, text="Open File", command=get_file_path)
 button_select_file.grid(row=0, column=0, columnspan=2, pady=10)
 button_select_folder = tk.Button(root, text="Open Folder", command=get_folder_path)
 button_select_folder.grid(row=1, column=0, columnspan=2, pady=10)
+
+#create settings button on the top right corner
+button_settings = tk.Button(root, text="⚙️", command=openSettings)
+button_settings.grid(row=0, column=2, columnspan=2, pady=10)
 
 # Create a text widget for displaying status messages
 text = tk.Text(root, height=3, width=50, font=("Californian FB", 12))
