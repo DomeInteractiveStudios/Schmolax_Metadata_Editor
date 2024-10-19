@@ -1,4 +1,10 @@
 import os
+import sys
+import locale
+
+# Ensure the script can handle non-ASCII characters
+locale.setlocale(locale.LC_ALL, '')
+sys.stdout.reconfigure(encoding='utf-8')
 import platform
 import tkinter as tk
 import webbrowser
