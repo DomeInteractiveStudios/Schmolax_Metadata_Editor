@@ -217,7 +217,8 @@ def show_entry_fields(origin):
     
     # Add change cover art button
     button_change_cover = tk.Button(tab3, text="Change Cover Art", command=get_cover_art).grid(row=2, column=0, columnspan=2, padx=20, pady=10)
-    button_search_cover = tk.Button(tab3, text="Search Cover Art Online", command=search_cover_art_online).grid(row=3, column=0, columnspan=2, padx=20, pady=10)
+    button_save_cover = tk.Button(tab3, text="Save Cover Art", command=download_cover_art).grid(row=3, column=0, columnspan=2, padx=20, pady=10)
+    button_search_cover = tk.Button(tab3, text="Search Cover Art Online", command=search_cover_art_online).grid(row=4, column=0, columnspan=2, padx=20, pady=10)
 
     # Add a new text field to tab2
     lyric_text_field = tk.Text(tab2, height=30, width=40, wrap=tk.WORD)
@@ -442,7 +443,7 @@ def get_file_metadata(file_path):
     #print main info in console
     if platform.system() == 'Linux': os.system('clear')
     if platform.system() == 'Windows': os.system('cls')
-    print(f"Song: {song_name}\nArtist: {artist}\nAlbum: {album}\nYear: {audio.get("date", [""])[0]}\n")
+    print(f"Song: {song_name}\nArtist: {artist}\nAlbum: {album}\nYear: {audio.get("date", [""])[0]}\nGenre: {genre}\n")
 
     def audio_duration(length): 
         hours = length // 3600  # calculate in hours 
@@ -499,6 +500,17 @@ def get_cover_art():
             update_entry_fields()
         else:
             PrintText("Invalid image format. Please select a JPG/JPEG file\n", "red")
+
+def download_cover_art():
+    if image:
+        suggested_file_name = f"{album}_cover.jpg" if album else "cover.jpg"
+        file_path = filedialog.asksaveasfilename(defaultextension=".jpg", initialfile=suggested_file_name, filetypes=[("JPEG files", "*.jpg"), ("All files", "*.*")])
+        if file_path:
+            with open(file_path, "wb") as f:
+                f.write(image)
+            PrintText(f"Cover art downloaded to {file_path}\n", "green")
+    else:
+        PrintText("No cover art to download\n", "red")
 
 def is_tag(value):
     # Check if the value is in the set of known tags
