@@ -276,7 +276,7 @@ def show_entry_fields(origin):
     e8.grid(row=9, column=1, padx=10, pady=5, sticky="w") # Year
     e9.grid(row=10, column=1, padx=10, pady=5, sticky="w") # Genre
     e10.grid(row=11, column=1, padx=10, pady=5, sticky="w") # BPM
-    e11.grid(row=12, column=1, padx=10, pady=5, sticky="w") # Comment
+    e11.grid(row=12, column=1, padx=20, pady=10, sticky="w") # Comment
 
     # Read Only Metadata Fields Tab
     tk.Label(tab4, text="Kind: ").grid(row=2, column=0, padx=10, pady=5, sticky="e")
@@ -326,7 +326,7 @@ def update_entry_fields():
     # Year Field with Fallback
     if e8:
         e8.delete(0, tk.END)
-        e8.insert(0, year if year else "") #TODO: Make it so that although it outputs the year, it keeps the original date as a comment
+        e8.insert(0, year if year else "")
 
     # Genre Field with Fallback
     if e9:
@@ -391,12 +391,21 @@ def get_file_metadata(file_path):
             total_tracks = audio.get("totaltracks", [""])[0] #get total tracks only if not set by track number
         else: 
             if(not total_tracks): total_tracks = ""
-        if audio.get("discnumber", [""])[0] != "": disc_number = audio.get("discnumber", [""])[0]
+        if audio.get("discnumber", [""])[0] != "": 
+            discNum = audio.get("discnumber", [""])[0]
+            disc_number = discNum.split("/")[0] if "/" in discNum else discNum
+            total_discs = discNum.split("/")[1] if "/" in discNum else ""
         else: disc_number = ""
-        if audio.get("totaldiscs", [""])[0] != "": total_discs = audio.get("totaldiscs", [""])[0]
-        else: total_discs = ""
+        if audio.get("totaldiscs", [""])[0] != "": 
+            total_discs = audio.get("totaldiscs", [""])[0]
+        else: 
+            if(not total_discs): total_discs = ""
+        if audio.get("comment", [""])[0] != "": comment += audio.get("comment", [""])[0] #? get comment before year so that the year can be added at the end of the comment
+        else: comment = ""
         if audio.get("date", [""])[0] != "" and len(audio["date"]) > 0:
             temp_year = audio.get("date", [""])[0]
+            if("-" in temp_year): 
+                comment += f"Original date: {temp_year}\n" #? if the year has more than just the year save the original date as a comment
             
             # Check if there’s a 4-digit year in the entire date string
             dateSegments = temp_year.split("-") if "-" in temp_year else [temp_year]
@@ -415,8 +424,6 @@ def get_file_metadata(file_path):
         else: genre = ""
         if audio.get("bpm", [""])[0] != "": bpm = audio.get("bpm", [""])[0]
         else: bpm = ""
-        if audio.get("comment", [""])[0] != "": comment = audio.get("comment", [""])[0]
-        else: comment = ""
         
         # Check if the file is an MP3 file and use ID3 tags if it is
         if file_path.endswith(".mp3"):
@@ -461,8 +468,8 @@ def get_file_metadata(file_path):
         PrintText("No metadata found for file: " + file_name + "\n", "yellow")
 
     #print main info in console
-    # if platform.system() == 'Linux': os.system('clear')
-    # if platform.system() == 'Windows': os.system('cls')
+    if platform.system() == 'Linux': os.system('clear')
+    if platform.system() == 'Windows': os.system('cls')
     print(f"Song: {song_name}\nArtist: {artist}\nAlbum: {album}\nYear: {audio.get("date", [""])[0]}\nGenre: {genre}\n")
 
     def audio_duration(length): 
