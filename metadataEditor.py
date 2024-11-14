@@ -203,6 +203,8 @@ def show_entry_fields(origin):
     notebook.add(tab2, text='Lyrics')
     notebook.add(tab3, text='Cover Art')
     notebook.add(tab4, text='Read Only')
+    # Bind tab switching event
+    notebook.bind("<<NotebookTabChanged>>", on_tab_switch)
 
     # Add an image to tab3
     image_label = tk.Label(tab3)
@@ -257,6 +259,11 @@ def show_entry_fields(origin):
     e10 = tk.Entry(tab1)
     e11 = tk.Entry(tab1)
 
+    entries = [e1, e2, e3, e4, e5, e6, es6, e7, es7, e8, e9, e10, e11]
+    for entry in entries:
+        entry.pack()
+        entry.bind("<KeyRelease>", on_entry_modified)
+
     e1.grid(row=2, column=1, padx=10, pady=5, sticky="w") # Song Name
     e2.grid(row=3, column=1, padx=10, pady=5, sticky="w") # Artist
     e3.grid(row=4, column=1, padx=10, pady=5, sticky="w") # Album
@@ -288,7 +295,7 @@ def show_entry_fields(origin):
 
 
 def update_entry_fields():
-    global lyrics
+    global lyrics, song_name, artist, album, album_artist, composer, track_number, total_tracks, disc_number, total_discs, year, genre, bpm, comment, image, image_label, no_img_text
     if e1:
         e1.delete(0, tk.END)
         e1.insert(0, song_name)
@@ -316,12 +323,15 @@ def update_entry_fields():
     if es7:
         es7.delete(0, tk.END)
         es7.insert(0, total_discs)
+    # Year Field with Fallback
     if e8:
         e8.delete(0, tk.END)
-        e8.insert(0, year)
+        e8.insert(0, year if year else "") #TODO: Make it so that although it outputs the year, it keeps the original date as a comment
+
+    # Genre Field with Fallback
     if e9:
         e9.delete(0, tk.END)
-        e9.insert(0, genre)
+        e9.insert(0, genre if genre else "Unknown Genre")
     if e10:
         e10.delete(0, tk.END)
         e10.insert(0, bpm)
@@ -358,6 +368,7 @@ def get_file_metadata(file_path):
     global song_name, artist, album, album_artist, composer, track_number, total_tracks, disc_number, total_discs, year, lyrics, genre, bpm, comment, image, no_metadata
     global kind, duration, size, bit_rate, sample_rate, channels, encoding
     no_metadata = False
+    total_tracks_set_by_track_number = False
     audio = mutagen.File(file_path, easy=True)
     
     if audio:
@@ -371,25 +382,34 @@ def get_file_metadata(file_path):
         else: album_artist = ""
         if audio.get("composer", [""])[0] != "": composer = audio.get("composer", [""])[0]
         else: composer = ""
-        if audio.get("tracknumber", [""])[0] != "": track_number = audio.get("tracknumber", [""])[0]
+        if audio.get("tracknumber", [""])[0] != "": 
+            trackNum = audio.get("tracknumber", [""])[0]
+            track_number = trackNum.split("/")[0] if "/" in trackNum else trackNum
+            total_tracks = trackNum.split("/")[1] if "/" in trackNum else ""
         else: track_number = ""
-        if audio.get("totaltracks", [""])[0] != "": total_tracks = audio.get("totaltracks", [""])[0]
-        else: total_tracks = ""
+        if audio.get("totaltracks", [""])[0] != "": 
+            total_tracks = audio.get("totaltracks", [""])[0] #get total tracks only if not set by track number
+        else: 
+            if(not total_tracks): total_tracks = ""
         if audio.get("discnumber", [""])[0] != "": disc_number = audio.get("discnumber", [""])[0]
         else: disc_number = ""
         if audio.get("totaldiscs", [""])[0] != "": total_discs = audio.get("totaldiscs", [""])[0]
         else: total_discs = ""
-        if audio.get("date", [""])[0] != "" and len(audio["date"]) > 0: 
+        if audio.get("date", [""])[0] != "" and len(audio["date"]) > 0:
             temp_year = audio.get("date", [""])[0]
-            dateSegments = []
-            if "-" in temp_year: dateSegments = temp_year.split("-")
-            for segment in dateSegments: #since the date inside the metadata isn't always in the same format, i get the year by being the only 4 digit number in the date
-                #print("\n"+ segment + " -> len " + str(len(segment)))
-                if len(segment) == 4: 
+            
+            # Check if there’s a 4-digit year in the entire date string
+            dateSegments = temp_year.split("-") if "-" in temp_year else [temp_year]
+            
+            # Loop through each segment to find a 4-digit year
+            for segment in dateSegments:
+                if len(segment) == 4 and segment.isdigit():
                     year = segment
-                    #print(f"{segment} added as year")
-                else: year = ""
-        else: year = ""
+                    break  # Stop as soon as we find a valid year
+            else:
+                year = ""  # Set to empty if no 4-digit year was found
+        else:
+            year = ""
         # Check if the "genre" key exists and if the associated list is non-empty
         if "genre" in audio and len(audio["genre"]) > 0 and audio["genre"][0] != "": genre = audio["genre"][0]
         else: genre = ""
@@ -441,8 +461,8 @@ def get_file_metadata(file_path):
         PrintText("No metadata found for file: " + file_name + "\n", "yellow")
 
     #print main info in console
-    if platform.system() == 'Linux': os.system('clear')
-    if platform.system() == 'Windows': os.system('cls')
+    # if platform.system() == 'Linux': os.system('clear')
+    # if platform.system() == 'Windows': os.system('cls')
     print(f"Song: {song_name}\nArtist: {artist}\nAlbum: {album}\nYear: {audio.get("date", [""])[0]}\nGenre: {genre}\n")
 
     def audio_duration(length): 
@@ -698,7 +718,7 @@ def apply_changes():
         audio.save()
 
 def save_changes():
-    global no_metadata
+    global no_metadata, has_unsaved_changes
 
     if no_metadata: 
         apply_changes()
@@ -708,9 +728,24 @@ def save_changes():
     apply_changes()
     PrintText("Changes Saved\n", "green")
 
+    has_unsaved_changes = False  # Reset flag after saving changes
+    
+# Callback for when an entry is modified
+def on_entry_modified(event):
+    global has_unsaved_changes
+    has_unsaved_changes = True
+    #print("Change detected")
+
+# Function to handle tab switching
+def on_tab_switch(event):
+    global has_unsaved_changes
+    if has_unsaved_changes:
+        save_changes()  # Save changes before switching tabs
+    #print("Tab switched")
+
 # Main loop
 root = tk.Tk()
-myappid = 'dome.schmolax_metadata.dolly.v_0.1'  # arbitrary string
+myappid = 'dome.schmolax_metadata.dolly.v_0.5'  # version string
 ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
 
 # Change window title
@@ -737,6 +772,9 @@ button_settings.grid(row=0, column=2, columnspan=2, pady=10)
 text = tk.Text(root, height=3, width=50, font=("Californian FB", 12))
 text.config(state=tk.DISABLED) 
 text.grid(row=2, column=0, columnspan=2, padx=10, pady=10)
+
+# Track unsaved changes
+has_unsaved_changes = False
 
 # Create text tags for different colors
 text.tag_configure("red", foreground="red")

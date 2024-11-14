@@ -41,7 +41,8 @@ def GetImgVariables(album, artist):
 
 
 def main():
-    image_path = f"https://musicbrainz.org/search?query={albumName}+{artistName}&type=release&limit=1&method=indexed"
+    
+    image_path = f"https://musicbrainz.org/search?query={albumName}+AND+artist%3A{artistName}&type=release&limit=1&method=advanced"
     response = requests.get(image_path)
     soup = BeautifulSoup(response.content, 'html.parser')
 
