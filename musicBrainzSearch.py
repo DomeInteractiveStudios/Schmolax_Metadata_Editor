@@ -41,7 +41,7 @@ def GetImgVariables(album, artist):
 
 
 def main():
-    
+    #TODO: Change the way the image is found to make it so that it searches on a more reliable database
     image_path = f"https://musicbrainz.org/search?query={albumName}+AND+artist%3A{artistName}&type=release&limit=1&method=advanced"
     response = requests.get(image_path)
     soup = BeautifulSoup(response.content, 'html.parser')

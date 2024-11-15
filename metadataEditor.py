@@ -257,7 +257,7 @@ def show_entry_fields(origin):
     e8 = tk.Entry(tab1)
     e9 = tk.Entry(tab1)
     e10 = tk.Entry(tab1)
-    e11 = tk.Entry(tab1)
+    e11 = tk.Text(tab1, height=10, width=30, wrap=tk.WORD)
 
     entries = [e1, e2, e3, e4, e5, e6, es6, e7, es7, e8, e9, e10, e11]
     for entry in entries:
@@ -276,7 +276,7 @@ def show_entry_fields(origin):
     e8.grid(row=9, column=1, padx=10, pady=5, sticky="w") # Year
     e9.grid(row=10, column=1, padx=10, pady=5, sticky="w") # Genre
     e10.grid(row=11, column=1, padx=10, pady=5, sticky="w") # BPM
-    e11.grid(row=12, column=1, padx=20, pady=10, sticky="w") # Comment
+    e11.grid(row=12, column=1, padx=10, pady=5, sticky="w") # Comment
 
     # Read Only Metadata Fields Tab
     tk.Label(tab4, text="Kind: ").grid(row=2, column=0, padx=10, pady=5, sticky="e")
@@ -336,8 +336,10 @@ def update_entry_fields():
         e10.delete(0, tk.END)
         e10.insert(0, bpm)
     if e11:
-        e11.delete(0, tk.END)
-        e11.insert(0, comment)
+        e11.delete(1.0, tk.END)
+        e11.insert(tk.END, "")
+        #print("Before insertion, comment variable:", repr(comment))
+        e11.insert(tk.END, comment)
     if lyric_text_field:
         lyrics_to_display = lyrics.replace('\r', '\n').replace('\u2005', ' ')
         lyric_text_field.delete(1.0, tk.END)
@@ -400,12 +402,12 @@ def get_file_metadata(file_path):
             total_discs = audio.get("totaldiscs", [""])[0]
         else: 
             if(not total_discs): total_discs = ""
-        if audio.get("comment", [""])[0] != "": comment += audio.get("comment", [""])[0] #? get comment before year so that the year can be added at the end of the comment
+        if audio.get("comment", [""])[0] != "": comment = audio.get("comment", [""])[0] #? get comment before year so that the year can be added at the end of the comment
         else: comment = ""
         if audio.get("date", [""])[0] != "" and len(audio["date"]) > 0:
             temp_year = audio.get("date", [""])[0]
             if("-" in temp_year): 
-                comment += f"Original date: {temp_year}\n" #? if the year has more than just the year save the original date as a comment
+                comment += f"\nFull date: {temp_year}\n" #? if the year has more than just the year save the original date as a comment
             
             # Check if there’s a 4-digit year in the entire date string
             dateSegments = temp_year.split("-") if "-" in temp_year else [temp_year]
@@ -593,7 +595,7 @@ def apply_changes():
     year = e8.get().strip()
     genre = e9.get().strip()
     bpm = e10.get().strip()
-    comment = e11.get().strip()
+    comment = e11.get(1.0, tk.END).strip()
     lyrics = lyric_text_field.get(1.0, tk.END).strip()
 
     if file_path.endswith(".mp3"):
