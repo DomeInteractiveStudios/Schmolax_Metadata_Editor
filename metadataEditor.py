@@ -203,6 +203,7 @@ def show_entry_fields(origin):
     notebook.add(tab2, text='Lyrics')
     notebook.add(tab3, text='Cover Art')
     notebook.add(tab4, text='Read Only')
+
     # Bind tab switching event
     notebook.bind("<<NotebookTabChanged>>", on_tab_switch)
 
@@ -257,7 +258,7 @@ def show_entry_fields(origin):
     e8 = tk.Entry(tab1)
     e9 = tk.Entry(tab1)
     e10 = tk.Entry(tab1)
-    e11 = tk.Text(tab1, height=10, width=30, wrap=tk.WORD)
+    e11 = tk.Text(tab1, height=10, width=15, wrap=tk.WORD)
 
     entries = [e1, e2, e3, e4, e5, e6, es6, e7, es7, e8, e9, e10, e11]
     for entry in entries:
@@ -337,7 +338,6 @@ def update_entry_fields():
         e10.insert(0, bpm)
     if e11:
         e11.delete(1.0, tk.END)
-        e11.insert(tk.END, "")
         #print("Before insertion, comment variable:", repr(comment))
         e11.insert(tk.END, comment)
     if lyric_text_field:
