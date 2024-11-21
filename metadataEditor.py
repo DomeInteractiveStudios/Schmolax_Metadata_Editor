@@ -71,7 +71,7 @@ multipleFiles = []
 outer_notebooks = []
 
 # block features
-allowMultipleFiles = False
+allowMultipleFiles = True
 
 def openSettings():
     print("Settings opened")
@@ -84,6 +84,54 @@ def remove_all_notebooks():
             #print(f"name: {notebook}\n")
             notebook.destroy()
         outer_notebooks.clear()
+
+def create_menu(root):
+    global menubar, file_menu, edit_menu
+    menubar = tk.Menu(root)
+    root.config(menu=menubar)
+    file_menu = tk.Menu(menubar, tearoff=0)
+    menubar.add_cascade(label="File", menu=file_menu)
+    file_menu.add_command(label="Open File", command=get_file_path)
+    file_menu.add_command(label="Open Folder", command=get_folder_path)
+    file_menu.add_separator()
+    file_menu.add_command(label="Exit", command=root.quit)
+
+    edit_menu = tk.Menu(menubar, tearoff=0)
+    menubar.add_cascade(label="Edit", menu=edit_menu)
+    edit_menu.add_command(label="Settings", command=openSettings)
+
+def destoyGUI():
+    if text: text.destroy()
+    if canvas: canvas.destroy()
+    if button_select_file: button_select_file.destroy()
+    if button_select_folder: button_select_folder.destroy()
+    if button_settings: button_settings.destroy()
+    if menubar: menubar.destroy()
+
+def createGUI(root):
+    global text, canvas, button_select_file, button_select_folder, button_settings
+
+    # Create a canvas widget with a fixed size
+    canvas = tk.Canvas(root, width=500, height=800)
+    canvas.grid(row=0, column=0, columnspan=2, rowspan=6)
+    canvas.grid_propagate(False)  # Prevent the canvas from resizing
+
+    # Create a button widget for selecting files
+    button_select_file = tk.Button(root, text="Open File", command=get_file_path)
+    button_select_file.grid(row=0, column=0, columnspan=2, pady=10)
+    button_select_folder = tk.Button(root, text="Open Folder", command=get_folder_path)
+    button_select_folder.grid(row=1, column=0, columnspan=2, pady=10)
+
+    # #create settings button on the top right corner
+    button_settings = tk.Button(root, text="⚙️", command=openSettings)
+    button_settings.grid(row=0, column=2, columnspan=2, pady=10)
+
+    # Create a text widget for displaying status messages
+    text = tk.Text(root, height=3, width=50, font=("Californian FB", 12))
+    text.config(state=tk.DISABLED) 
+    text.grid(row=2, column=0, columnspan=2, padx=10, pady=10)
+
+    create_menu(root)
 
 def CleanText():
     text.config(state=tk.NORMAL)  
@@ -124,13 +172,15 @@ def get_file_path():
     global file_path, file_name
     file_path = filedialog.askopenfilename()
     if file_path:
-        remove_all_notebooks()
-        if len(multipleFiles) != 0: return
+        destoyGUI()
+        createGUI(root)
         if(file_path.endswith(".mp3") or file_path.endswith(".flac")):
             file_name = file_path.split("/")[-1]
             get_file_metadata(file_path)
-            if not e1:
-                show_entry_fields(root)
+            #if not e1:
+                #print("showing entry fields")
+                #show_entry_fields(root)
+            show_entry_fields(root)
             update_entry_fields()
         else:
             CleanText()
@@ -143,9 +193,9 @@ def get_folder_path():
     folder_path = filedialog.askdirectory()
     if folder_path:
         multipleFiles.clear()
-        remove_all_notebooks()  # Clear all previous notebooks
         print(f"Current number of files in folder: {len(multipleFiles)}")
-        if len(multipleFiles) != 0: return
+        destoyGUI()
+        createGUI(root)
         for file in os.listdir(folder_path):
             if file.endswith(".mp3") or file.endswith(".flac"):
                 multipleFiles.append(os.path.join(folder_path, file))
@@ -176,6 +226,7 @@ def get_folder_path():
         CleanText()
         PrintText("No MP3 or FLAC files found in the folder\n", "red")
 
+    CleanText()
     for file in multipleFiles:
         file_name = file.split("/")[-1]
         PrintText(f"Song {multipleFiles.index(file) + 1}: {file_name}\n", "default")
@@ -762,25 +813,7 @@ root.title("Schmolax Metadata Editor")
 # Change window icon
 root.iconbitmap("Icons/schmolax.ico")
 
-# Create a canvas widget with a fixed size
-canvas = tk.Canvas(root, width=500, height=800)
-canvas.grid(row=0, column=0, columnspan=2, rowspan=6)
-canvas.grid_propagate(False)  # Prevent the canvas from resizing
-
-# Create a button widget for selecting files
-button_select_file = tk.Button(root, text="Open File", command=get_file_path)
-button_select_file.grid(row=0, column=0, columnspan=2, pady=10)
-button_select_folder = tk.Button(root, text="Open Folder", command=get_folder_path)
-button_select_folder.grid(row=1, column=0, columnspan=2, pady=10)
-
-#create settings button on the top right corner
-button_settings = tk.Button(root, text="⚙️", command=openSettings)
-button_settings.grid(row=0, column=2, columnspan=2, pady=10)
-
-# Create a text widget for displaying status messages
-text = tk.Text(root, height=3, width=50, font=("Californian FB", 12))
-text.config(state=tk.DISABLED) 
-text.grid(row=2, column=0, columnspan=2, padx=10, pady=10)
+createGUI(root)# Create the GUI elements
 
 # Track unsaved changes
 has_unsaved_changes = False
