@@ -67,71 +67,23 @@ channels = ""
 
 # Flags to check metadata completion
 no_metadata = False
-multipleFiles = []
-outer_notebooks = []
+# multipleFiles = []
+# outer_notebooks = []
 
 # block features
-allowMultipleFiles = True
+# allowMultipleFiles = False
 
-def openSettings():
-    print("Settings opened")
+# def openSettings():
+#     print("Settings opened")
 
-def remove_all_notebooks():
-    #print(f"number of outer notebooks: {len(outer_notebooks)}\n")
-    if len(outer_notebooks) != 0:
-        #print("removing all outer notebooks\n")
-        for notebook in outer_notebooks:
-            #print(f"name: {notebook}\n")
-            notebook.destroy()
-        outer_notebooks.clear()
-
-def create_menu(root):
-    global menubar, file_menu, edit_menu
-    menubar = tk.Menu(root)
-    root.config(menu=menubar)
-    file_menu = tk.Menu(menubar, tearoff=0)
-    menubar.add_cascade(label="File", menu=file_menu)
-    file_menu.add_command(label="Open File", command=get_file_path)
-    file_menu.add_command(label="Open Folder", command=get_folder_path)
-    file_menu.add_separator()
-    file_menu.add_command(label="Exit", command=root.quit)
-
-    edit_menu = tk.Menu(menubar, tearoff=0)
-    menubar.add_cascade(label="Edit", menu=edit_menu)
-    edit_menu.add_command(label="Settings", command=openSettings)
-
-def destoyGUI():
-    if text: text.destroy()
-    if canvas: canvas.destroy()
-    if button_select_file: button_select_file.destroy()
-    if button_select_folder: button_select_folder.destroy()
-    if button_settings: button_settings.destroy()
-    if menubar: menubar.destroy()
-
-def createGUI(root):
-    global text, canvas, button_select_file, button_select_folder, button_settings
-
-    # Create a canvas widget with a fixed size
-    canvas = tk.Canvas(root, width=500, height=800)
-    canvas.grid(row=0, column=0, columnspan=2, rowspan=6)
-    canvas.grid_propagate(False)  # Prevent the canvas from resizing
-
-    # Create a button widget for selecting files
-    button_select_file = tk.Button(root, text="Open File", command=get_file_path)
-    button_select_file.grid(row=0, column=0, columnspan=2, pady=10)
-    button_select_folder = tk.Button(root, text="Open Folder", command=get_folder_path)
-    button_select_folder.grid(row=1, column=0, columnspan=2, pady=10)
-
-    # #create settings button on the top right corner
-    button_settings = tk.Button(root, text="⚙️", command=openSettings)
-    button_settings.grid(row=0, column=2, columnspan=2, pady=10)
-
-    # Create a text widget for displaying status messages
-    text = tk.Text(root, height=3, width=50, font=("Californian FB", 12))
-    text.config(state=tk.DISABLED) 
-    text.grid(row=2, column=0, columnspan=2, padx=10, pady=10)
-
-    create_menu(root)
+# def remove_all_notebooks():
+#     #print(f"number of outer notebooks: {len(outer_notebooks)}\n")
+#     if len(outer_notebooks) != 0:
+#         #print("removing all outer notebooks\n")
+#         for notebook in outer_notebooks:
+#             #print(f"name: {notebook}\n")
+#             notebook.destroy()
+#         outer_notebooks.clear()
 
 def CleanText():
     text.config(state=tk.NORMAL)  
@@ -142,10 +94,10 @@ def PrintText(message, color):
 
     text.config(state=tk.NORMAL)  # Allow text insertion
     text.insert(tk.END, message, color)
-    
+
     # Define the regex pattern to detect URLs
     url_pattern = re.compile(r'(https?://\S+)')
-    
+
     # Find all URLs in the message and tag them
     for url in url_pattern.findall(message):
         start_idx = text.search(url, '1.0', tk.END)
@@ -153,18 +105,18 @@ def PrintText(message, color):
             # Parse the line and column
             line, col = start_idx.split('.')
             start_pos = f"{line}.{col}"
-            
+
             # Compute the end position
             end_col = int(col) + len(url)
             end_pos = f"{line}.{end_col}"
-            
+
             # Add and configure the tag
             text.tag_add('link', start_pos, end_pos)
             text.tag_config('link', foreground='blue', underline=1)
-            
+
             # Bind the link to open in a web browser
             text.tag_bind('link', '<Button-1>', lambda e, url=url: webbrowser.open(url))
-    
+
     text.config(state=tk.DISABLED)  # Prevent typing in the Text widget
     text.see(tk.END)  # Ensure the latest text is visible
 
@@ -172,65 +124,62 @@ def get_file_path():
     global file_path, file_name
     file_path = filedialog.askopenfilename()
     if file_path:
-        destoyGUI()
-        createGUI(root)
+        # remove_all_notebooks()
+        # if len(multipleFiles) != 0: return
         if(file_path.endswith(".mp3") or file_path.endswith(".flac")):
             file_name = file_path.split("/")[-1]
             get_file_metadata(file_path)
-            #if not e1:
-                #print("showing entry fields")
-                #show_entry_fields(root)
-            show_entry_fields(root)
+            if not e1:
+                show_entry_fields(root)
             update_entry_fields()
         else:
             CleanText()
             PrintText("Invalid file format. Please select an MP3 or FLAC file\n", "red")
 
-def get_folder_path():
-    if not allowMultipleFiles:
-        PrintText("This feature is not available at the moment\n", "yellow")
-        return
-    folder_path = filedialog.askdirectory()
-    if folder_path:
-        multipleFiles.clear()
-        print(f"Current number of files in folder: {len(multipleFiles)}")
-        destoyGUI()
-        createGUI(root)
-        for file in os.listdir(folder_path):
-            if file.endswith(".mp3") or file.endswith(".flac"):
-                multipleFiles.append(os.path.join(folder_path, file))
-        if len(multipleFiles) > 1:
-            print(f"Number of files in folder: {len(multipleFiles)}")
-            notebook = ttk.Notebook(root)
-            notebook.grid(row=3, column=0, columnspan=2, padx=10, pady=10)
-            outer_notebooks.append(notebook)  # Keep track of the outer notebook
-            
-            for i, file_path in enumerate(multipleFiles, start=1):
-                get_file_metadata(file_path)
+# def get_folder_path():
+#     if not allowMultipleFiles:
+#         PrintText("This feature is not available at the moment\n", "yellow")
+#         return
+#     folder_path = filedialog.askdirectory()
+#     if folder_path:
+#         multipleFiles.clear()
+#         remove_all_notebooks()  # Clear all previous notebooks
+#         print(f"Current number of files in folder: {len(multipleFiles)}")
+#         if len(multipleFiles) != 0: return
+#         for file in os.listdir(folder_path):
+#             if file.endswith(".mp3") or file.endswith(".flac"):
+#                 multipleFiles.append(os.path.join(folder_path, file))
+#         if len(multipleFiles) > 1:
+#             print(f"Number of files in folder: {len(multipleFiles)}")
+#             notebook = ttk.Notebook(root)
+#             notebook.grid(row=3, column=0, columnspan=2, padx=10, pady=10)
+#             outer_notebooks.append(notebook)  # Keep track of the outer notebook
 
-                tab = ttk.Frame(notebook)
-                notebook.add(tab, text=f'Song {i}')
+#             for i, file_path in enumerate(multipleFiles, start=1):
+#                 get_file_metadata(file_path)
 
-                inner_notebook = show_entry_fields(tab)
-                
-                if not e1:  # Assuming e1 is a condition to check for the first time
-                    show_entry_fields(inner_notebook)
-                update_entry_fields()
-        else:
-            file_path = multipleFiles[0]
-            get_file_metadata(file_path)
-            if not e1:
-                show_entry_fields(root)
-            update_entry_fields()
-    else:
-        CleanText()
-        PrintText("No MP3 or FLAC files found in the folder\n", "red")
+#                 tab = ttk.Frame(notebook)
+#                 notebook.add(tab, text=f'Song {i}')
 
-    CleanText()
-    for file in multipleFiles:
-        file_name = file.split("/")[-1]
-        PrintText(f"Song {multipleFiles.index(file) + 1}: {file_name}\n", "default")
-    
+#                 inner_notebook = show_entry_fields(tab)
+
+#                 if not e1:  # Assuming e1 is a condition to check for the first time
+#                     show_entry_fields(inner_notebook)
+#                 update_entry_fields()
+#         else:
+#             file_path = multipleFiles[0]
+#             get_file_metadata(file_path)
+#             if not e1:
+#                 show_entry_fields(root)
+#             update_entry_fields()
+#     else:
+#         CleanText()
+#         PrintText("No MP3 or FLAC files found in the folder\n", "red")
+
+#     for file in multipleFiles:
+#         file_name = file.split("/")[-1]
+#         PrintText(f"Song {multipleFiles.index(file) + 1}: {file_name}\n", "default")
+
 
 def show_entry_fields(origin):
     global e1, e2, e3, e4, e5, e6, es6, e7, es7, e8, e9, e10, e11, lyric_text_field, image_label, no_img_text
@@ -254,7 +203,6 @@ def show_entry_fields(origin):
     notebook.add(tab2, text='Lyrics')
     notebook.add(tab3, text='Cover Art')
     notebook.add(tab4, text='Read Only')
-
     # Bind tab switching event
     notebook.bind("<<NotebookTabChanged>>", on_tab_switch)
 
@@ -268,7 +216,7 @@ def show_entry_fields(origin):
         no_img_text.grid(row=1, column=0, columnspan=2, padx=10, pady=10)
         no_img_text.insert(tk.END, "No Cover Art Found")
         no_img_text.configure(state=tk.DISABLED)
-    
+
     # Add change cover art button
     button_change_cover = tk.Button(tab3, text="Change Cover Art", command=get_cover_art).grid(row=2, column=0, columnspan=2, padx=20, pady=10)
     button_save_cover = tk.Button(tab3, text="Save Cover Art", command=download_cover_art).grid(row=3, column=0, columnspan=2, padx=20, pady=10)
@@ -309,6 +257,7 @@ def show_entry_fields(origin):
     e8 = tk.Entry(tab1)
     e9 = tk.Entry(tab1)
     e10 = tk.Entry(tab1)
+    e11 = tk.Text(tab1, height=10, width=30, wrap=tk.WORD)
     e11 = tk.Text(tab1, height=10, width=15, wrap=tk.WORD)
 
     entries = [e1, e2, e3, e4, e5, e6, es6, e7, es7, e8, e9, e10, e11]
@@ -389,6 +338,7 @@ def update_entry_fields():
         e10.insert(0, bpm)
     if e11:
         e11.delete(1.0, tk.END)
+        e11.insert(tk.END, "")
         #print("Before insertion, comment variable:", repr(comment))
         e11.insert(tk.END, comment)
     if lyric_text_field:
@@ -423,7 +373,7 @@ def get_file_metadata(file_path):
     no_metadata = False
     total_tracks_set_by_track_number = False
     audio = mutagen.File(file_path, easy=True)
-    
+
     if audio:
         if audio.get("title", [""])[0] != "": song_name = audio.get("title", [""])[0]
         else: song_name = file_name.split(".")[0]
@@ -459,10 +409,10 @@ def get_file_metadata(file_path):
             temp_year = audio.get("date", [""])[0]
             if("-" in temp_year): 
                 comment += f"\nFull date: {temp_year}\n" #? if the year has more than just the year save the original date as a comment
-            
+
             # Check if there’s a 4-digit year in the entire date string
             dateSegments = temp_year.split("-") if "-" in temp_year else [temp_year]
-            
+
             # Loop through each segment to find a 4-digit year
             for segment in dateSegments:
                 if len(segment) == 4 and segment.isdigit():
@@ -477,7 +427,7 @@ def get_file_metadata(file_path):
         else: genre = ""
         if audio.get("bpm", [""])[0] != "": bpm = audio.get("bpm", [""])[0]
         else: bpm = ""
-        
+
         # Check if the file is an MP3 file and use ID3 tags if it is
         if file_path.endswith(".mp3"):
             audio = ID3(file_path)
@@ -535,7 +485,7 @@ def get_file_metadata(file_path):
         if hours < 10: hours = f"0{hours}"
         if mins < 10: mins = f"0{mins}"
         if seconds < 10: seconds = f"0{seconds}"
-  
+
         return hours, mins, seconds  # returns the duration 
 
     # Read Only Metadata Fields
@@ -784,12 +734,12 @@ def save_changes():
         apply_changes()
         PrintText("Metadata fields have been created\n", "green")
         no_metadata = False
-    
+
     apply_changes()
     PrintText("Changes Saved\n", "green")
 
     has_unsaved_changes = False  # Reset flag after saving changes
-    
+
 # Callback for when an entry is modified
 def on_entry_modified(event):
     global has_unsaved_changes
@@ -813,7 +763,25 @@ root.title("Schmolax Metadata Editor")
 # Change window icon
 root.iconbitmap("Icons/schmolax.ico")
 
-createGUI(root)# Create the GUI elements
+# Create a canvas widget with a fixed size
+canvas = tk.Canvas(root, width=500, height=800)
+canvas.grid(row=0, column=0, columnspan=2, rowspan=6)
+canvas.grid_propagate(False)  # Prevent the canvas from resizing
+
+# Create a button widget for selecting files
+button_select_file = tk.Button(root, text="Open File", command=get_file_path)
+button_select_file.grid(row=0, column=0, columnspan=2, pady=10)
+# button_select_folder = tk.Button(root, text="Open Folder", command=get_folder_path)
+# button_select_folder.grid(row=1, column=0, columnspan=2, pady=10)
+
+#create settings button on the top right corner
+# button_settings = tk.Button(root, text="⚙️", command=openSettings)
+# button_settings.grid(row=0, column=2, columnspan=2, pady=10)
+
+# Create a text widget for displaying status messages
+text = tk.Text(root, height=3, width=50, font=("Californian FB", 12))
+text.config(state=tk.DISABLED) 
+text.grid(row=2, column=0, columnspan=2, padx=10, pady=10)
 
 # Track unsaved changes
 has_unsaved_changes = False
