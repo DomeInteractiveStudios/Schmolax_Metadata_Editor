@@ -1,8 +1,8 @@
 import sys
-from PyQt5.QtWidgets import QApplication, QMainWindow, QAction, QFileDialog
+from PyQt5.QtWidgets import QApplication, QMainWindow, QAction, QFileDialog, QPushButton, QWidget, QVBoxLayout
 import os
 from datetime import datetime
-
+import mutagen
 
 def recentAcitivityFile():
     recent_activity_folder = os.getcwd()
@@ -18,7 +18,7 @@ def recentAcitivityFile():
 
     return txt_file_path
 
-def readRecentActivity(newFilePath):
+def updateRecentActivity(newFilePath, album):
     txt_file_path = recentAcitivityFile()
 
     with open(txt_file_path, 'r+') as file:
@@ -31,7 +31,7 @@ def readRecentActivity(newFilePath):
             file.write(line)
         if not found:
             current_date = datetime.now().strftime('%Y-%m-%d')
-            file.write(f'{current_date} || {newFilePath}\n')
+            file.write(f'{current_date} || {album} || {newFilePath}\n')
 
 
 class MainWindow(QMainWindow):
@@ -53,14 +53,47 @@ class MainWindow(QMainWindow):
         openAction = QAction('Open', self)
         openAction.triggered.connect(self.openFile)
         fileMenu.addAction(openAction)
+        fileMenu.setStyleSheet("margin-bottom: 30px;")
 
         self.setGeometry(300, 300, 800, 600)
+        
+        # Create a central widget and layout
+        self.centralWidget = QWidget()
+        self.setCentralWidget(self.centralWidget)
+        self.layout = QVBoxLayout(self.centralWidget)
+        
+        self.checkForRecentActivity()
 
     def openFile(self):
         options = QFileDialog.Options()
         fileName, _ = QFileDialog.getOpenFileName(self, "Open File", "", "Audio Files (*.mp3 *.flac)", options=options)
         if fileName:
-            readRecentActivity(fileName) # Add this line
+            audio = mutagen.File(fileName, easy=True)
+        else: return
+        if audio:
+            if audio.get("album", [""])[0] != "": album = audio.get("album", [""])[0]
+            else: album = "Unkown Album"
+
+        updateRecentActivity(fileName, album)
+        self.layout.addWidget(self.createSongButton(fileName, album))
+
+    def createSongButton(self, songPath, album):
+        songButton = QPushButton(album, self)
+        songButton.setFixedSize(150, 150)
+        songButton.setStyleSheet("background-color: none; position: relative; margin-left: 20px; margin-top: 20px; margin-right: 20px; border: 1px solid #ccc;")
+        songButton.clicked.connect(lambda: print(songPath))
+        self.layout.addWidget(songButton)  # Add the button to the layout
+        return songButton
+
+    
+    def checkForRecentActivity(self):
+        txt_file_path = recentAcitivityFile()
+        with open(txt_file_path, 'r') as file:
+            lines = file.readlines()
+            for line in lines:
+                date, album, songPath = line.split(' || ')
+                songPath = songPath.strip()
+                self.createSongButton(songPath, album)
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
