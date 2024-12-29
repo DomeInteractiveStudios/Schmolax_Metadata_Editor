@@ -524,17 +524,17 @@ def get_cover_art():
     global image
     image_path = filedialog.askopenfilename()
     if image_path:
-        if image_path.endswith(".jpg") or image_path.endswith(".jpeg"):
+        if image_path.endswith(".jpg") or image_path.endswith(".jpeg") or image_path.endswith(".png"):
             with open(image_path, "rb") as img_file:
                 image = img_file.read()
             update_entry_fields()
         else:
-            PrintText("Invalid image format. Please select a JPG/JPEG file\n", "red")
+            PrintText("Invalid image format. Please select a JPG/JPEG or PNG file\n", "red")
 
 def download_cover_art():
     if image:
         suggested_file_name = f"{album}_cover.jpg" if album else "cover.jpg"
-        file_path = filedialog.asksaveasfilename(defaultextension=".jpg", initialfile=suggested_file_name, filetypes=[("JPEG files", "*.jpg"), ("All files", "*.*")])
+        file_path = filedialog.asksaveasfilename(defaultextension=".jpg", initialfile=suggested_file_name, filetypes=[("JPEG files", "*.jpg"), ("PNG files", "*.png"), ("All files", "*.*")])
         if file_path:
             with open(file_path, "wb") as f:
                 f.write(image)
