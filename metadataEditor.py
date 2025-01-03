@@ -24,6 +24,11 @@ file_name = ""
 from geniusSearch import getVariables
 from musicBrainzSearch import GetImgVariables
 
+notebook = None  # Notebook widget
+tab1 = None  # Song Info tab
+tab2 = None  # Lyrics tab
+tab3 = None  # Cover Art tab
+tab4 = None  # Read Only tab
 
 e1 = None  # Song Name field
 e2 = None  # Artist field
@@ -67,6 +72,9 @@ channels = ""
 
 # Flags to check metadata completion
 no_metadata = False
+num_of_saves = 0
+current_file_path = ""
+current_tab = ""
 # multipleFiles = []
 # outer_notebooks = []
 
@@ -121,13 +129,15 @@ def PrintText(message, color):
     text.see(tk.END)  # Ensure the latest text is visible
 
 def get_file_path():
-    global file_path, file_name
+    global file_path, file_name, tab1, notebook
     file_path = filedialog.askopenfilename()
     if file_path:
         # remove_all_notebooks()
         # if len(multipleFiles) != 0: return
         if(file_path.endswith(".mp3") or file_path.endswith(".flac")):
+            num_of_saves = 0
             file_name = file_path.split("/")[-1]
+            current_file_path = file_path   
             get_file_metadata(file_path)
             if not e1:
                 show_entry_fields(root)
@@ -135,6 +145,14 @@ def get_file_path():
         else:
             CleanText()
             PrintText("Invalid file format. Please select an MP3 or FLAC file\n", "red")
+    else: 
+        if current_file_path:
+            get_file_metadata(current_file_path)
+            update_entry_fields()
+        else:
+            PrintText("No file selected\n", "red")
+    if notebook and tab1: 
+        notebook.select(tab1)
 
 # def get_folder_path():
 #     if not allowMultipleFiles:
@@ -183,6 +201,7 @@ def get_file_path():
 
 def show_entry_fields(origin):
     global e1, e2, e3, e4, e5, e6, es6, e7, es7, e8, e9, e10, e11, lyric_text_field, image_label, no_img_text
+    global tab1, tab2, tab3, tab4, notebook
 
     # Create a notebook widget for tabs
     notebook = ttk.Notebook(origin)
@@ -212,7 +231,7 @@ def show_entry_fields(origin):
     if image:
         update_image()
     else:
-        no_img_text = tk.Text(tab3, height=3, width=50)
+        no_img_text = tk.Text(tab3, height=3, width=50) #always create the no_img_text field, just hide it if there is an image
         no_img_text.grid(row=1, column=0, columnspan=2, padx=10, pady=10)
         no_img_text.insert(tk.END, "No Cover Art Found")
         no_img_text.configure(state=tk.DISABLED)
@@ -350,7 +369,7 @@ def update_entry_fields():
         update_image()
 
 def update_image():
-    global image, image_label, no_img_text
+    global image, image_label, no_img_text, tab3
     if image:
         try:
             img = Image.open(BytesIO(image))
@@ -366,6 +385,16 @@ def update_image():
         except Exception as e:
             print(f"Error loading image: {e}")
             PrintText("Invalid image format. Please select a JPG/JPEG file\n", "red")
+    else:
+        print("No image found")
+        image_label.config(image="")
+        image_label.image = None
+        # Create a placeholder text if it doesn't exist
+        if not no_img_text: 
+            no_img_text = tk.Text(tab3, height=3, width=50)
+            no_img_text.grid(row=1, column=0, columnspan=2, padx=20, pady=10)
+        no_img_text.insert(tk.END, "No Cover Art Found")
+        no_img_text.configure(state=tk.DISABLED)
 
 def get_file_metadata(file_path):
     global song_name, artist, album, album_artist, composer, track_number, total_tracks, disc_number, total_discs, year, lyrics, genre, bpm, comment, image, no_metadata
@@ -432,11 +461,13 @@ def get_file_metadata(file_path):
         if file_path.endswith(".mp3"):
             audio = ID3(file_path)
             lyrics = ""
+            image = None
             for tag in audio.values():
                 if isinstance(tag, USLT):
                     lyrics += tag.text
                 elif isinstance(tag, APIC):
                     image = tag.data
+
         # Check if the file is a FLAC file and use FLAC tags if it is
         elif file_path.endswith(".flac"):
             audio = FLAC(file_path)
@@ -444,6 +475,8 @@ def get_file_metadata(file_path):
             lyrics = audio.get("LYRICS", [""])[0]
             if audio.pictures:
                 image = audio.pictures[0].data
+            else:
+                image = None
         else:
             lyrics = audio.get("lyrics", [""])[0]
 
@@ -728,7 +761,9 @@ def apply_changes():
         audio.save()
 
 def save_changes():
-    global no_metadata, has_unsaved_changes
+    global no_metadata, has_unsaved_changes, num_of_saves, current_tab
+
+    num_of_saves += 1
 
     if no_metadata: 
         apply_changes()
@@ -736,7 +771,7 @@ def save_changes():
         no_metadata = False
 
     apply_changes()
-    PrintText("Changes Saved\n", "green")
+    PrintText(f"Changes Saved {num_of_saves}: {current_tab}\n", "green")
 
     has_unsaved_changes = False  # Reset flag after saving changes
 
@@ -748,9 +783,11 @@ def on_entry_modified(event):
 
 # Function to handle tab switching
 def on_tab_switch(event):
-    global has_unsaved_changes
+    global has_unsaved_changes, current_tab
     if has_unsaved_changes:
         save_changes()  # Save changes before switching tabs
+
+    current_tab = event.widget.tab(event.widget.select(), "text")
     #print("Tab switched")
 
 # Main loop
