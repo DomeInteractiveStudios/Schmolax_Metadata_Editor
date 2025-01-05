@@ -1,7 +1,8 @@
 import sys
-from PyQt5.QtWidgets import QApplication, QMainWindow, QAction, QFileDialog, QPushButton, QWidget, QHBoxLayout, QGridLayout, QVBoxLayout, QLabel
+from PyQt5.QtWidgets import QApplication, QMainWindow, QAction, QFileDialog, QPushButton, QWidget, QHBoxLayout, QGridLayout, QVBoxLayout, QLabel, QLayout
 from PyQt5.QtGui import QIcon, QPixmap, QImage
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QRect, QPoint, QSize
+
 import os
 from datetime import datetime
 import mutagen
@@ -94,6 +95,78 @@ def updateDateForAlbum(album):
 library = RecentActivity()
 shortcuts = []
 actions = []
+maxNumberOfSongsPerRow = 8
+marginBetweenButtons = 5
+
+
+class FlowLayout(QLayout):
+    def __init__(self, parent=None, margin=0, spacing=10):
+        super().__init__(parent)
+        self.itemList = []
+        self.setContentsMargins(margin, margin, margin, margin)
+        self.setSpacing(spacing)
+
+    def addItem(self, item):
+        self.itemList.append(item)
+
+    def count(self):
+        return len(self.itemList)
+
+    def itemAt(self, index):
+        if 0 <= index < len(self.itemList):
+            return self.itemList[index]
+        return None
+
+    def takeAt(self, index):
+        if 0 <= index < len(self.itemList):
+            return self.itemList.pop(index)
+        return None
+
+    def expandingDirections(self):
+        return Qt.Orientations(Qt.Horizontal)
+
+    def hasHeightForWidth(self):
+        return True
+
+    def heightForWidth(self, width):
+        y = 0
+        line_height = 0
+        x = 0
+        for item in self.itemList:
+            widget = item.widget()
+            widget_size = item.sizeHint()
+            if x + widget_size.width() > width:
+                y += line_height + self.spacing()
+                x = 0
+                line_height = 0
+            line_height = max(line_height, widget_size.height())
+            x += widget_size.width() + self.spacing()
+        return y + line_height
+
+    def setGeometry(self, rect):
+        super().setGeometry(rect)
+        x, y, line_height = rect.x(), rect.y(), 0
+        for item in self.itemList:
+            widget = item.widget()
+            widget_size = item.sizeHint()
+            if x + widget_size.width() > rect.width():
+                x = rect.x()
+                y += line_height + self.spacing()
+                line_height = 0
+            item.setGeometry(QRect(QPoint(x, y), widget_size))
+            x += widget_size.width() + self.spacing()
+            line_height = max(line_height, widget_size.height())
+
+    def sizeHint(self):
+        return self.minimumSize()
+
+    def minimumSize(self):
+        size = QSize()
+        for item in self.itemList:
+            size = size.expandedTo(item.minimumSize())
+        size += QSize(2 * self.contentsMargins().top(), 2 * self.contentsMargins().left())
+        return size
+
 
 class MainWindow(QMainWindow):
     def setShortcuts(self):
@@ -121,7 +194,10 @@ class MainWindow(QMainWindow):
         self.setShortcuts() #? SETS SHORTCUTS
 
         self.setWindowTitle('Schmolax Metadata Editor')
-
+        self.setWindowIcon(QIcon('Icons/Schmolax_Icon.png'))
+        screen = QApplication.primaryScreen()
+        screen_size = screen.size()
+        self.setStyleSheet(f"background-color: none; max-width: {screen_size.width()}px; overflow: hidden; white-space: normal;")
         # Create menu bar
         menubar = self.menuBar()
         fileMenu = menubar.addMenu('File')
@@ -137,9 +213,7 @@ class MainWindow(QMainWindow):
         # Create central widget and layout
         self.centralWidget = QWidget()
         self.setCentralWidget(self.centralWidget)
-
-        # Use a horizontal layout for the buttons
-        self.layout = QHBoxLayout(self.centralWidget)
+        self.layout = FlowLayout(self.centralWidget, spacing=20)
         self.centralWidget.setLayout(self.layout)
 
         self.setGeometry(300, 300, 800, 600)
@@ -184,18 +258,17 @@ class MainWindow(QMainWindow):
     def createSongButton(self, album):
         #TODO: 
             ## make sections divided by last modified date (SECTIONS: TODAY, YESTERDAY, THIS WEEK, THIS MONTH, THIS YEAR, ONE FOR EACH YEAR AFTER THAT)
-            ## make it so that only max 8 buttons are shown per row
             ## make it so on resize the buttons will "shrink" until they become 150x150 after which they will go to the next row
         container = QWidget(self)
         container_layout = QVBoxLayout(container)
-        container_layout.setSpacing(5)  # Space between button and label
-        container_layout.setContentsMargins(0, 0, 0, 0)  # Remove extra margins
+        container_layout.setSpacing(marginBetweenButtons)  # Space between button and label
+        container_layout.setContentsMargins(0, 0, 0, 0)  # Remove extra 
 
         # Create the song button
         songButton = QPushButton('', self)
         songButton.setFixedSize(200, 200)
         songButton.setStyleSheet(
-            "background-color: none; border: 1px solid #ccc; margin: 0; text-align: center;"
+            "background-color: none; border: 1px solid #ccc; margin: 25px; text-align: center;"
         )
         if self.getFirstSongImage(album):
             songButton.setIcon(QIcon(QPixmap.fromImage(QImage.fromData(self.getFirstSongImage(album)))))
@@ -223,26 +296,36 @@ class MainWindow(QMainWindow):
         self.layout.addWidget(container)
 
     def getFirstSongImage(self, album):
-        if album not in library.albums or album == "Unknown Album": return None
-        song = library.get_songs_by_album(album)[0]
+        if album not in library.albums: return None
         image = None
-        if song.endswith(".mp3"):
-            audio = ID3(song)
-            for tag in audio.values():
-                if isinstance(tag, APIC):
-                    image = tag.data
+        for song_path in library.get_songs_by_album(album):
+                if song_path.endswith(".mp3"):
+                    audio = ID3(song_path)
+                    for tag in audio.values():
+                        if isinstance(tag, APIC):
+                            image = tag.data
+                            break
+                elif song_path.endswith(".flac"):
+                    audio = FLAC(song_path)
+                    if audio.pictures:
+                        image = audio.pictures[0].data
+                        break
+                if image:
+                    break
 
-        # Check if the file is a FLAC file and use FLAC tags if it is
-        elif song.endswith(".flac"):
-            audio = FLAC(song)
-            if audio.pictures:
-                image = audio.pictures[0].data
-        
         return image
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
+    icon_path = os.path.join(os.path.dirname(__file__), 'Icons', 'Schmolax.ico')
+    app.setWindowIcon(QIcon(icon_path))
+    # if not os.path.exists(icon_path):
+    #     print(f"Icon file not found at: {icon_path}")
+    # else:
+    #     print(f"Icon file found at: {icon_path}")
+
     mainWin = MainWindow()
+    mainWin.setWindowIcon(QIcon(icon_path))  #! Explicitly set the window's icon
     for action in actions:
         mainWin.addAction(action)
     mainWin.show()
