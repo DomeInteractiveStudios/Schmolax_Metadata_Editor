@@ -1,8 +1,12 @@
 import sys
-from PyQt5.QtWidgets import QApplication, QMainWindow, QAction, QFileDialog, QPushButton, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout
+from PyQt5.QtWidgets import QApplication, QMainWindow, QAction, QFileDialog, QPushButton, QWidget, QHBoxLayout, QGridLayout, QVBoxLayout, QLabel
+from PyQt5.QtGui import QIcon, QPixmap, QImage
+from PyQt5.QtCore import Qt
 import os
 from datetime import datetime
 import mutagen
+from mutagen.id3 import ID3, APIC
+from mutagen.flac import FLAC
 
 class Shortcut:
     # NAME: NAME OF THE SHORTCUT
@@ -74,6 +78,19 @@ def updateRecentActivity(newFilePath, album):
             current_date = datetime.now().strftime('%Y-%m-%d')
             file.write(f'{current_date} || {album} || {newFilePath}\n')
 
+def updateDateForAlbum(album): 
+    songFile = recentAcitivityFile()
+    with open(songFile, 'r+') as file:
+        lines = file.readlines()
+        file.seek(0)
+        for line in lines:
+            date, albumName, songPath = line.split(' || ')
+            if albumName == album:
+                current_date = datetime.now().strftime('%Y-%m-%d')
+                file.write(f'{current_date} || {album} || {songPath}')
+            else:
+                file.write(line)
+
 library = RecentActivity()
 shortcuts = []
 actions = []
@@ -143,23 +160,15 @@ class MainWindow(QMainWindow):
             else: album = "Unknown Album"
 
         updateRecentActivity(fileName, album)
-        if not library.get_album_by_name(album): self.layout.addWidget(self.createSongButton(album))
+        updateDateForAlbum(album)
+        newAlbum = False
+        if not library.get_album_by_name(album): 
+            newAlbum = True
         library.add_song(album, fileName)
-
-
-    def createSongButton(self, album):
-        #TODO: 
-            ## make it so that only max 8 buttons are shown per row
-            ## make it so on resize the buttons go to the next row
-        songButton = QPushButton(album, self)
-        songButton.setFixedSize(200, 200)
-        songButton.setStyleSheet(
-            "background-color: none; border: 1px solid #ccc; margin: 5px;"
-        )
-        songButton.clicked.connect(lambda: print(library.get_songs_by_album(album)))
-
-        # Add button to horizontal layout
-        self.layout.addWidget(songButton)
+        if newAlbum: 
+            #create a new button only if the album is new, this need to be created after adding the album to the library
+            #however I need to check if it was already present before adding it, for obvious reasons
+            self.layout.addWidget(self.createSongButton(album))
 
     def checkForRecentActivity(self):
         txt_file_path = recentAcitivityFile()
@@ -172,6 +181,64 @@ class MainWindow(QMainWindow):
         for album in library.albums:
             self.createSongButton(album)
 
+    def createSongButton(self, album):
+        #TODO: 
+            ## make sections divided by last modified date (SECTIONS: TODAY, YESTERDAY, THIS WEEK, THIS MONTH, THIS YEAR, ONE FOR EACH YEAR AFTER THAT)
+            ## make it so that only max 8 buttons are shown per row
+            ## make it so on resize the buttons will "shrink" until they become 150x150 after which they will go to the next row
+        container = QWidget(self)
+        container_layout = QVBoxLayout(container)
+        container_layout.setSpacing(5)  # Space between button and label
+        container_layout.setContentsMargins(0, 0, 0, 0)  # Remove extra margins
+
+        # Create the song button
+        songButton = QPushButton('', self)
+        songButton.setFixedSize(200, 200)
+        songButton.setStyleSheet(
+            "background-color: none; border: 1px solid #ccc; margin: 0; text-align: center;"
+        )
+        if self.getFirstSongImage(album):
+            songButton.setIcon(QIcon(QPixmap.fromImage(QImage.fromData(self.getFirstSongImage(album)))))
+            songButton.setIconSize(songButton.size())
+        else:
+            songButton.setIcon(QIcon(QPixmap("Icons/Default_Album_Image.jpg")))
+            songButton.setIconSize(songButton.size())
+
+        # Connect the button click to display songs of the album
+        # TODO: If a song is opened the date will be updated to today's date
+        songButton.clicked.connect(lambda: print(library.get_songs_by_album(album)))
+
+        # Create a label for the album name
+        albumLabel = QLabel(album, self)
+        albumLabel.setAlignment(Qt.AlignHCenter | Qt.AlignTop)
+        albumLabel.setFixedWidth(songButton.width())
+        albumLabel.setWordWrap(True)
+        albumLabel.setStyleSheet("font-size: 18px; color: #000; font-family: Cooper Black; font-weight: 400;")
+
+        # Add the button and label to the container's layout
+        container_layout.addWidget(songButton)
+        container_layout.addWidget(albumLabel)
+
+        # Add the container to the main layout
+        self.layout.addWidget(container)
+
+    def getFirstSongImage(self, album):
+        if album not in library.albums or album == "Unknown Album": return None
+        song = library.get_songs_by_album(album)[0]
+        image = None
+        if song.endswith(".mp3"):
+            audio = ID3(song)
+            for tag in audio.values():
+                if isinstance(tag, APIC):
+                    image = tag.data
+
+        # Check if the file is a FLAC file and use FLAC tags if it is
+        elif song.endswith(".flac"):
+            audio = FLAC(song)
+            if audio.pictures:
+                image = audio.pictures[0].data
+        
+        return image
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
