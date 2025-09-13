@@ -53,6 +53,7 @@ cover/
 
 #Misc
 *.txt
+*.db
 
 # Translations
 *.mo
